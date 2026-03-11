@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Estoque Profissional ERP</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f9;
+margin:0;
+}
+
+/* HEADER */
+
+header{
+background:#2c3e50;
+color:white;
+padding:15px;
+font-size:22px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+/* HAMBURGER */
+
+.hamburger{
+width:30px;
+height:22px;
+position:relative;
+cursor:pointer;
+}
+
+.hamburger span{
+position:absolute;
+height:3px;
+width:100%;
+background:white;
+border-radius:2px;
+transition:0.3s;
+}
+
+.hamburger span:nth-child(1){top:0;}
+.hamburger span:nth-child(2){top:9px;}
+.hamburger span:nth-child(3){top:18px;}
+
+.hamburger.active span:nth-child(1){
+transform:rotate(45deg);
+top:9px;
+}
+
+.hamburger.active span:nth-child(2){
+opacity:0;
+}
+
+.hamburger.active span:nth-child(3){
+transform:rotate(-45deg);
+top:9px;
+}
+
+/* MENU */
+
+.menu{
+position:absolute;
+top:65px;
+right:20px;
+background:#34495e;
+box-shadow:0 5px 15px rgba(0,0,0,0.3);
+border-radius:8px;
+display:flex;
+flex-direction:column;
+min-width:200px;
+opacity:0;
+transform:translateY(-10px);
+pointer-events:none;
+transition:0.25s;
+}
+
+.menu.show{
+opacity:1;
+transform:translateY(0);
+pointer-events:auto;
+}
+
+.menu button,
+.menu label{
+color:white;
+padding:12px;
+cursor:pointer;
+border:none;
+background:none;
+text-align:left;
+font-size:14px;
+}
+
+.menu button:hover,
+.menu label:hover{
+background:#2c3e50;
+}
+
+/* CONTAINER */
+
+.container{
+padding:20px;
+max-width:1300px;
+margin:auto;
+}
+
+/* FORM */
+
+form{
+background:white;
+padding:15px;
+border-radius:8px;
+margin-bottom:20px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+input,select{
+padding:8px;
+margin:5px;
+}
+
+button{
+padding:8px 14px;
+cursor:pointer;
+border:none;
+background:#3498db;
+color:white;
+border-radius:4px;
+}
+
+button:hover{
+background:#2980b9;
+}
+
+/* TABELA */
+
+table{
+width:100%;
+border-collapse:collapse;
+background:white;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:center;
+}
+
+/* MAPA */
+
+.prateleiraBox{
+background:white;
+padding:15px;
+margin-top:20px;
+border-radius:8px;
+box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+.nivel{
+display:flex;
+gap:6px;
+margin:4px 0;
+align-items:center;
+}
+
+.nivelLabel{
+width:60px;
+font-weight:bold;
+}
+
+.slot{
+width:40px;
+height:40px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:4px;
+color:white;
+font-size:11px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.livre{background:#27ae60;}
+.ocupado{background:#e74c3c;}
+
+/* MODAL */
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modalBox{
+background:white;
+padding:20px;
+border-radius:8px;
+width:400px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+
+📦 Sistema de Estoque ERP
+
+<div class="hamburger" id="hamburger" onclick="toggleMenu()">
+<span></span>
+<span></span>
+<span></span>
+</div>
+
+<div class="menu" id="menu">
+
+<button onclick="mostrarTela('listaTela')">📋 Lista de Caixas</button>
+
+<button onclick="mostrarTela('mapaTela')">🗺️ Mapa de Prateleiras</button>
+
+<hr>
+
+<label>
+📥 Importar CSV
+<input type="file" id="importCSV" accept=".csv" onchange="importarCSV(event)" hidden>
+</label>
+
+<button onclick="exportarCSV()">📤 Exportar CSV</button>
+
+<button onclick="backup()">💾 Backup JSON</button>
+
+</div>
+
+</header>
+
+<div class="container">
+
+<form onsubmit="salvar(event)">
+
+<input id="caixa" placeholder="Caixa" required>
+
+<input type="date" id="inicio" required>
+
+<input type="date" id="fim">
+
+<input type="date" id="validade" required>
+
+<input id="prateleira" placeholder="Prateleira" required>
+
+<input id="nivel" placeholder="Nivel (1-13)" required>
+
+<input id="espaco" placeholder="Espaço (1-6)" required>
+
+<select id="status">
+<option value="Guardada">Guardada</option>
+<option value="Preparada">Preparada</option>
+<option value="Digitalizada">Digitalizada</option>
+<option value="Eliminada">Eliminada</option>
+</select>
+
+<input id="usuarioStatus" placeholder="Usuário responsável">
+
+<button>Salvar</button>
+
+</form>
+
+<!-- TELA LISTA -->
+
+<div id="listaTela">
+
+<h2>Lista</h2>
+
+<input 
+id="buscarCaixa" 
+placeholder="🔎 Buscar caixa..." 
+onkeyup="buscarCaixa()" 
+style="margin-bottom:10px;padding:8px;width:250px;">
+
+<table>
+<thead>
+<tr>
+<th>Caixa</th>
+<th>Status</th>
+<th>Prateleira</th>
+<th>Nivel</th>
+<th>Espaço</th>
+<th>Ações</th>
+</tr>
+</thead>
+
+<tbody id="lista"></tbody>
+
+</table>
+
+<div id="paginacao" style="margin-top:10px;text-align:center;"></div>
+
+</div>
+
+<!-- TELA MAPA -->
+
+<div id="mapaTela" style="display:none">
+
+<h2>Mapa de Prateleiras</h2>
+
+<input 
+id="buscarPrateleira" 
+placeholder="🔎 Buscar prateleira..." 
+onkeyup="mapa()" 
+style="margin-bottom:10px;padding:8px;width:250px;">
+
+<div id="mapa"></div>
+
+</div>
+
+</div>
+
+<div class="modal" id="modal">
+<div class="modalBox" id="modalConteudo"></div>
+</div>
+
+<script>
+
+function mostrarTela(tela){
+
+document.getElementById("listaTela").style.display="none";
+document.getElementById("mapaTela").style.display="none";
+
+document.getElementById(tela).style.display="block";
+
+toggleMenu();
+
+}
+
+//////////////// VARIAVEIS GLOBAIS ////////////
+
+let db;
+let dados=[];
+let edit=null;
+let paginaAtual = 1;
+let itensPorPagina = 50;
+let buscaTimer;
+let indexCaixas = [];
+
+
+/* ---------------- BANCO INDEXEDDB ---------------- */
+
+function abrirDB(){
+
+let request=indexedDB.open("estoqueDB",1);
+
+request.onupgradeneeded=function(e){
+
+db=e.target.result;
+
+if(!db.objectStoreNames.contains("caixas")){
+
+db.createObjectStore("caixas",{keyPath:"caixa"});
+
+}
+
+};
+
+request.onsuccess=function(e){
+
+db=e.target.result;
+
+carregarDados();
+
+};
+
+request.onerror=function(){
+
+console.log("Erro ao abrir banco");
+
+};
+
+}
+
+function salvarDB(){
+
+let tx=db.transaction("caixas","readwrite");
+let store=tx.objectStore("caixas");
+
+dados.forEach(d=>{
+
+store.put(d);
+
+});
+
+}
+
+function carregarDados(){
+
+let tx=db.transaction("caixas","readonly");
+let store=tx.objectStore("caixas");
+
+let req=store.getAll();
+
+req.onsuccess=function(){
+
+dados=req.result || [];
+
+indexCaixas = dados.map(d => d.caixa.toLowerCase());
+
+console.log("Caixas carregadas:",dados.length);
+
+listar();
+
+};
+
+}
+
+/* ---------------- MENU ---------------- */
+
+function toggleMenu(){
+
+let menu=document.getElementById("menu");
+let hamb=document.getElementById("hamburger");
+
+menu.classList.toggle("show");
+hamb.classList.toggle("active");
+
+}
+
+/* ---------------- SALVAR ---------------- */
+
+function salvar(e){
+
+e.preventDefault();
+
+let statusValor=document.getElementById("status").value;
+let usuario=document.getElementById("usuarioStatus").value.trim();
+
+if(statusValor!="Guardada" && usuario==""){
+alert("Informe o usuário responsável");
+return;
+}
+
+let historico=[];
+
+if(edit!=null){
+
+let antigo=dados[edit];
+
+historico=antigo.historico || [];
+
+if(antigo.status!=statusValor){
+
+historico.push({
+status:statusValor,
+usuario:usuario,
+data:new Date().toLocaleString()
+});
+
+}
+
+}else{
+
+historico=[{
+status:statusValor,
+usuario:usuario,
+data:new Date().toLocaleString()
+}];
+
+}
+
+let item={
+caixa:document.getElementById("caixa").value,
+inicio:document.getElementById("inicio").value,
+fim:document.getElementById("fim").value,
+validade:document.getElementById("validade").value,
+prateleira:document.getElementById("prateleira").value,
+nivel:parseInt(document.getElementById("nivel").value),
+espaco:parseInt(document.getElementById("espaco").value),
+status:statusValor,
+usuario:usuario,
+historico:historico
+};
+
+if(edit!=null){
+dados[edit]=item;
+edit=null;
+}else{
+dados.push(item);
+}
+
+salvarDB();
+
+e.target.reset();
+
+listar();
+
+}
+
+/* ---------------- LISTA ---------------- */
+
+function listar(){
+
+let lista = document.getElementById("lista");
+if(!lista) return;
+
+let busca = document.getElementById("buscarCaixa")?.value.toLowerCase() || "";
+
+let filtrados = [];
+
+if(!busca){
+
+filtrados = dados;
+
+}else{
+
+for(let i=0;i<indexCaixas.length;i++){
+
+if(indexCaixas[i].includes(busca)){
+
+filtrados.push(dados[i]);
+
+}
+
+}
+
+}
+
+let totalPaginas = Math.ceil(filtrados.length / itensPorPagina);
+
+if(busca){
+paginaAtual = 1;
+}
+
+let inicio = (paginaAtual - 1) * itensPorPagina;
+let fim = inicio + itensPorPagina;
+
+let paginaDados = busca ? filtrados : filtrados.slice(inicio, fim);
+
+let html="";
+
+paginaDados.forEach((d,i)=>{
+
+let index = dados.indexOf(d);
+
+html+=`
+
+<tr onclick="detalhes(${index})">
+
+<td>${d.caixa}</td>
+<td>${d.status}</td>
+<td>${d.prateleira}</td>
+<td>${d.nivel}</td>
+<td>${d.espaco}</td>
+
+<td>
+
+<button onclick="event.stopPropagation(); editar(${index})">Editar</button>
+
+<button onclick="event.stopPropagation(); remover(${index})">Excluir</button>
+
+</td>
+
+</tr>
+
+`;
+
+});
+
+lista.innerHTML = html;
+
+renderPaginacao(totalPaginas, busca);
+
+mapa();
+
+}
+
+/* -------------- RENDERPAGINACAO ------/*
+function renderPaginacao(totalPaginas, busca){
+
+let pag=document.getElementById("paginacao");
+
+if(!pag) return;
+
+if(busca || totalPaginas<=1){
+
+pag.innerHTML="";
+return;
+
+}
+
+let html="";
+
+html+=`<button onclick="mudarPagina(${paginaAtual-1})">◀</button>`;
+
+html+=` Página ${paginaAtual} de ${totalPaginas} `;
+
+html+=`<button onclick="mudarPagina(${paginaAtual+1})">▶</button>`;
+
+pag.innerHTML=html;
+
+}
+
+/* -------- BUSCAR CAIXA ------- */
+
+function buscarCaixa(){
+
+clearTimeout(buscaTimer);
+
+buscaTimer = setTimeout(()=>{
+
+listar();
+
+},300);
+
+}
+
+/* -------------- MUDAR PAGINA ---- */
+
+function mudarPagina(p){
+
+let total = Math.ceil(dados.length / itensPorPagina);
+
+if(p<1 || p>total) return;
+
+paginaAtual = p;
+
+listar();
+
+}
+
+/* ---------------- EDITAR ---------------- */
+
+function editar(i){
+
+let d=dados[i];
+
+document.getElementById("caixa").value=d.caixa;
+document.getElementById("inicio").value=d.inicio;
+document.getElementById("fim").value=d.fim;
+document.getElementById("validade").value=d.validade;
+document.getElementById("prateleira").value=d.prateleira;
+document.getElementById("nivel").value=d.nivel;
+document.getElementById("espaco").value=d.espaco;
+document.getElementById("status").value=d.status;
+document.getElementById("usuarioStatus").value=d.usuario;
+
+edit=i;
+
+}
+
+/* ---------------- REMOVER ---------------- */
+
+function remover(i){
+
+if(confirm("Excluir caixa?")){
+
+let caixa=dados[i].caixa;
+
+let tx=db.transaction("caixas","readwrite");
+let store=tx.objectStore("caixas");
+
+store.delete(caixa);
+
+dados.splice(i,1);
+
+listar();
+
+}
+
+}
+
+/* ---------------- DETALHES ---------------- */
+
+function detalhes(i){
+
+let d=dados[i];
+
+let historicoHTML="";
+
+if(d.historico){
+
+d.historico.forEach(h=>{
+
+historicoHTML+=`
+
+<p>
+<b>${h.status}</b>
+${h.usuario ? "por "+h.usuario : ""}
+<br>
+<small>${h.data}</small>
+</p>
+
+`;
+
+});
+
+}
+
+let html=`
+
+<h2>Caixa ${d.caixa}</h2>
+
+<p><b>Status atual:</b> ${d.status}</p>
+
+<hr>
+
+<h3>Histórico</h3>
+
+${historicoHTML || "Sem histórico"}
+
+<br><br>
+
+<p><b>Prateleira:</b> ${d.prateleira}</p>
+<p><b>Nível:</b> ${d.nivel}</p>
+<p><b>Espaço:</b> ${d.espaco}</p>
+
+<br>
+
+<button onclick="fecharModal()">Fechar</button>
+
+`;
+
+document.getElementById("modalConteudo").innerHTML=html;
+
+document.getElementById("modal").style.display="flex";
+
+}
+
+/* ---------------- MAPA ---------------- */
+
+function mapa(){
+
+let mapa=document.getElementById("mapa");
+if(!mapa) return;
+
+let busca=document.getElementById("buscarPrateleira")?.value.toLowerCase() || "";
+
+mapa.innerHTML="";
+
+let prateleiras=[...new Set(dados.map(d=>d.prateleira))];
+
+prateleiras.forEach(p=>{
+
+if(busca && !p.toLowerCase().includes(busca)) return;
+
+let box=document.createElement("div");
+box.className="prateleiraBox";
+
+let titulo=document.createElement("h3");
+titulo.innerText="Prateleira "+p;
+
+box.appendChild(titulo);
+
+for(let n=13;n>=1;n--){
+
+let linha=document.createElement("div");
+linha.className="nivel";
+
+let label=document.createElement("div");
+label.className="nivelLabel";
+label.innerText="N"+n;
+
+linha.appendChild(label);
+
+for(let e=1;e<=6;e++){
+
+let slot=document.createElement("div");
+
+let ocupado=dados.findIndex(d=>d.prateleira==p && d.nivel==n && d.espaco==e);
+
+if(ocupado!=-1){
+
+slot.className="slot ocupado";
+slot.innerText=dados[ocupado].caixa;
+slot.onclick=()=>detalhes(ocupado);
+
+}else{
+
+slot.className="slot livre";
+slot.innerText=e;
+
+}
+
+linha.appendChild(slot);
+
+}
+
+box.appendChild(linha);
+
+}
+
+mapa.appendChild(box);
+
+});
+
+}
+
+/* ---------------- CSV ---------------- */
+
+function exportarCSV(){
+
+let csv="Caixa,Status,Usuario,Prateleira,Nivel,Espaco\n";
+
+dados.forEach(d=>{
+csv+=`${d.caixa},${d.status},${d.usuario},${d.prateleira},${d.nivel},${d.espaco}\n`;
+});
+
+let b=new Blob([csv],{type:"text/csv"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(b);
+a.download="estoque.csv";
+a.click();
+
+}
+
+/* ---------------- BACKUP JSON ---------------- */
+
+function backup(){
+
+let b=new Blob([JSON.stringify(dados,null,2)],{type:"application/json"});
+
+let a=document.createElement("a");
+
+a.href=URL.createObjectURL(b);
+
+a.download="backup_estoque.json";
+
+a.click();
+
+}
+
+/* ---------------- IMPORTAR JSON ---------------- */
+
+function importarJSON(event){
+
+let file=event.target.files[0];
+
+if(!file) return;
+
+let reader=new FileReader();
+
+reader.onload=function(e){
+
+let novos=JSON.parse(e.target.result);
+
+dados=dados.concat(novos);
+
+salvarDB();
+
+listar();
+
+alert("JSON importado com sucesso 🚀");
+
+};
+
+reader.readAsText(file);
+
+}
+
+/* ---------------- CSV IMPORT ---------------- */
+
+function importarCSV(event){
+
+let file = event.target.files[0];
+if(!file) return;
+
+let reader = new FileReader();
+
+reader.onload = function(e){
+
+let linhas = e.target.result.trim().split(/\r?\n/);
+
+linhas.shift(); // remove cabeçalho
+
+let novos = [];
+
+linhas.forEach(l=>{
+
+if(!l.trim()) return;
+
+let c = l.split(",");
+
+let caixa = c[0] || "";
+let status = c[1] || "Guardada";
+let usuario = "";
+let prateleira = "";
+let nivel = 0;
+let espaco = 0;
+
+if(c.length === 6){
+
+usuario = c[2];
+prateleira = c[3];
+nivel = parseInt(c[4]);
+espaco = parseInt(c[5]);
+
+}
+
+else if(c.length === 4){
+
+usuario = "";
+prateleira = c[2].replace(/[0-9]/g,"");
+nivel = parseInt(c[2].replace(/\D/g,""));
+espaco = parseInt(c[3]);
+
+}
+
+novos.push({
+
+caixa: caixa.trim(),
+status: status.trim(),
+usuario: usuario.trim(),
+prateleira: prateleira.trim(),
+nivel: nivel,
+espaco: espaco,
+
+inicio:"",
+fim:"",
+validade:"",
+
+historico:[{
+status:status,
+usuario:usuario,
+data:new Date().toLocaleString()
+}]
+
+});
+
+});
+
+dados = dados.concat(novos);
+
+salvarDB();
+
+indexCaixas = dados.map(d => d.caixa.toLowerCase());
+
+listar();
+
+alert(novos.length+" caixas importadas 🚀");
+
+};
+
+reader.readAsText(file);
+
+}
+
+/*----------------TELA----------------------*/
+function mostrarTela(tela){
+
+document.getElementById("listaTela").style.display="none";
+document.getElementById("mapaTela").style.display="none";
+
+document.getElementById(tela).style.display="block";
+
+toggleMenu();
+
+}
+
+/* ---------------- MODAL ---------------- */
+
+function fecharModal(){
+
+document.getElementById("modal").style.display="none";
+
+}
+
+window.onload = function(){
+    abrirDB();
+}
+
+</script>

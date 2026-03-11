@@ -1,0 +1,103 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Gerador de CSV de Caixas</title>
+
+<style>
+body{
+font-family:Arial;
+background:#f4f6f9;
+padding:40px;
+text-align:center;
+}
+
+input{
+padding:10px;
+font-size:16px;
+width:150px;
+}
+
+button{
+padding:10px 20px;
+font-size:16px;
+margin-left:10px;
+cursor:pointer;
+background:#3498db;
+color:white;
+border:none;
+border-radius:4px;
+}
+
+button:hover{
+background:#2980b9;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>📦 Gerador de CSV de Estoque</h2>
+
+<p>Quantidade de caixas:</p>
+
+<input type="number" id="qtd" value="1000">
+
+<button onclick="gerar()">Gerar CSV</button>
+
+<script>
+
+function gerar(){
+
+let qtd = parseInt(document.getElementById("qtd").value);
+
+if(!qtd || qtd <= 0){
+alert("Informe uma quantidade válida");
+return;
+}
+
+let statusLista = ["Guardada","Preparada","Digitalizada","Eliminada"];
+let usuarios = ["Everton","Maria","Carlos","Fernanda","Luiz","Julia","Ana",""];
+let prateleiras = [];
+
+for(let i=1;i<=50;i++){
+prateleiras.push(i);
+}
+
+let csv = "Caixa,Status,Usuario,Prateleira,Nivel,Espaco\n";
+
+for(let i=1;i<=qtd;i++){
+
+let caixa = String(i).padStart(6,"0");
+
+let status = statusLista[Math.floor(Math.random()*statusLista.length)];
+
+let usuario = usuarios[Math.floor(Math.random()*usuarios.length)];
+
+let prateleira = prateleiras[Math.floor(Math.random()*prateleiras.length)];
+
+let nivel = Math.floor(Math.random()*13)+1;
+
+let espaco = Math.floor(Math.random()*6)+1;
+
+csv += `${caixa},${status},${usuario},${prateleira},${nivel},${espaco}\n`;
+
+}
+
+let blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+
+let a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = "estoque_gerado.csv";
+
+a.click();
+
+}
+
+</script>
+
+</body>
+</html>
+```
