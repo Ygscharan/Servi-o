@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Estoque ERP - Gestão de Estrutura</title>
+<style>
+/* ... Mantive seu CSS e adicionei o novo ... */
+body{font-family:Arial;background:#f4f6f9;margin:0;}
+header{background:#2c3e50;color:white;padding:15px;font-size:22px;display:flex;justify-content:space-between;align-items:center;}
+.hamburger{width:30px;height:22px;position:relative;cursor:pointer;z-index:101;}
+.hamburger span{position:absolute;height:3px;width:100%;background:white;border-radius:2px;transition:0.3s;}
+.hamburger span:nth-child(1){top:0;} .hamburger span:nth-child(2){top:9px;} .hamburger span:nth-child(3){top:18px;}
+.hamburger.active span:nth-child(1){transform:rotate(45deg);top:9px;}
+.hamburger.active span:nth-child(2){opacity:0;}
+.hamburger.active span:nth-child(3){transform:rotate(-45deg);top:9px;}
+.menu{position:absolute;top:65px;right:20px;background:#34495e;box-shadow:0 5px 15px rgba(0,0,0,0.3);border-radius:8px;display:flex;flex-direction:column;min-width:200px;opacity:0;transform:translateY(-10px);pointer-events:none;transition:0.25s;z-index:100;}
+.menu.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+.menu button, .menu label{color:white;padding:12px;cursor:pointer;border:none;background:none;text-align:left;font-size:14px;}
+.menu button:hover, .menu label:hover{background:#2c3e50;}
+.container{padding:20px;max-width:1300px;margin:auto;}
+form, .card{background:white;padding:15px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+input,select{padding:8px;margin:5px;border:1px solid #ccc;border-radius:4px;}
+button{padding:8px 14px;cursor:pointer;border:none;background:#3498db;color:white;border-radius:4px;}
+button:hover{background:#2980b9;}
+table{width:100%;border-collapse:collapse;background:white;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+th,td{padding:10px;border-bottom:1px solid #ddd;text-align:center;}
+.prateleiraBox{background:white;padding:15px;margin-top:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+.nivel{display:flex;gap:6px;margin:4px 0;align-items:center;}
+.nivelLabel{width:60px;font-weight:bold;}
+.slot{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:white;font-size:11px;font-weight:bold;cursor:pointer;}
+.livre{background:#27ae60;}
+.ocupadoGuardada{background:#27ae60;}
+.ocupadoPreparada{background:#f1c40f;}
+.ocupadoDigitalizada{background:#3498db;}
+.ocupadoEliminada{background:#e74c3c;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;}
+.modalBox{background:white;padding:20px;border-radius:8px;width:400px;}
+.status-sync{font-size: 10px; color: #bdc3c7; margin-left:10px;}
+.badge{padding:4px 8px; border-radius:10px; font-size:11px; color:white; background:#7f8c8d;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+    <div>📦 ERP Estoque <span id="syncLabel" class="status-sync">...</span></div>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+    <div class="menu" id="menu">
+        <button onclick="mostrarTela('dashboardTela')">📊 Dashboard</button>
+        <button onclick="mostrarTela('listaTela')">📋 Lista de Caixas</button>
+        <button onclick="mostrarTela('mapaTela')">🗺️ Mapa de Prateleiras</button>
+        <button onclick="mostrarTela('configTela')">⚙️ Config. Prateleiras</button>
+        <hr>
+        <button onclick="selecionarPasta()">📂 Alterar Pasta</button>
+    </div>
+</header>
+
+<div class="container">
+
+    <div id="configTela" style="display:none">
+        <h2>⚙️ Gerenciar Estrutura</h2>
+        <div class="card">
+            <h3>Nova Prateleira</h3>
+            <p><small>Cada prateleira terá automaticamente 13 níveis com 6 espaços (Capacidade: 78 caixas).</small></p>
+            <input id="nomePrateleiraNova" placeholder="Nome (Ex: Setor A)">
+            <button onclick="adicionarPrateleira()">Cadastrar Prateleira</button>
+        </div>
+        <table>
+            <thead><tr><th>Nome</th><th>Ocupação</th><th>Ações</th></tr></thead>
+            <tbody id="listaPrateleirasConfig"></tbody>
+        </table>
+    </div>
+
+    <form id="cadastroForm" onsubmit="salvar(event)">
+        <h3>Lançamento de Caixa</h3>
+        <input id="caixa" placeholder="Número da Caixa" required>
+        <input type="date" id="inicio" required>
+        <input type="date" id="fim">
+        <input type="date" id="validade" required>
+        
+        <select id="prateleiraSelect" required>
+            <option value="">Selecione a Prateleira...</option>
+        </select>
+
+        <input id="nivel" type="number" min="1" max="13" placeholder="Nível (1-13)" required>
+        <input id="espaco" type="number" min="1" max="6" placeholder="Espaço (1-6)" required>
+        
+        <select id="status">
+            <option value="Guardada">Guardada</option>
+            <option value="Preparada">Preparada</option>
+            <option value="Digitalizada">Digitalizada</option>
+            <option value="Eliminada">Eliminada</option>
+        </select>
+        <input id="usuarioStatus" placeholder="Responsável">
+        <button type="submit" id="btnSalvar">Salvar</button>
+        <button type="button" id="btnCancelar" style="display:none;" onclick="cancelarEdicao()">Cancelar</button>
+    </form>
+
+    <div id="dashboardTela" style="display:none">
+        <h2>📊 Dashboard</h2>
+        <div id="resumoPrateleiras" class="resumoCards"></div>
+        <div class="card" style="max-width:500px; margin-top:20px;">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <div id="listaTela">
+        <h2>📋 Lista de Caixas</h2>
+        <input id="buscarCaixa" placeholder="🔎 Buscar caixa..." onkeyup="buscarCaixa()" style="width:300px;">
+        <table>
+            <thead><tr><th>Caixa</th><th>Status</th><th>Endereço</th><th>Ações</th></tr></thead>
+            <tbody id="lista"></tbody>
+        </table>
+        <div id="paginacao"></div>
+    </div>
+
+    <div id="mapaTela" style="display:none">
+        <h2>🗺️ Mapa de Ocupação</h2>
+        <div id="mapa"></div>
+    </div>
+
+</div>
+
+<div class="modal" id="modal"><div class="modalBox" id="modalConteudo"></div></div>
+
+<script>
+// ---------------- VARIÁVEIS ----------------
+// Agora os dados são divididos em 'caixas' e 'config'
+let db = { caixas: [], prateleiras: [] };
+let edit=null, paginaAtual=1, itensPorPagina=50, pastaHandle;
+let lastHash = "";
+
+// ---------------- INICIALIZAÇÃO ----------------
+window.onload = async function(){
+    await inicializarPasta();
+    setInterval(async () => { if(pastaHandle && edit===null) await carregarDB(true); }, 5000);
+};
+
+async function inicializarPasta(){
+    if(localStorage.getItem("pastaId")){
+        try { pastaHandle = await window.showDirectoryPicker(); await carregarDB(); } 
+        catch(e) { console.log("Aguardando permissão..."); }
+    } else { await selecionarPasta(); }
+}
+
+async function selecionarPasta(){
+    try{
+        pastaHandle = await window.showDirectoryPicker();
+        localStorage.setItem("pastaId", pastaHandle.name);
+        await carregarDB();
+    }catch(err){ alert("Selecione a pasta para carregar os dados."); }
+}
+
+// ---------------- BANCO DE DADOS ----------------
+async function carregarDB(silencioso = false){
+    if(!pastaHandle) return;
+    try{
+        const arquivo = await pastaHandle.getFileHandle("banco_erp.json",{create:true});
+        const file = await arquivo.getFile();
+        const texto = await file.text();
+        
+        if (texto !== lastHash) {
+            lastHash = texto;
+            db = texto ? JSON.parse(texto) : { caixas: [], prateleiras: [] };
+            atualizarInterface();
+            document.getElementById("syncLabel").innerText = "Sinc.: " + new Date().toLocaleTimeString();
+        }
+    }catch(err){ console.error(err); }
+}
+
+async function salvarDB(){
+    const arquivo = await pastaHandle.getFileHandle("banco_erp.json",{create:true});
+    const writable = await arquivo.createWritable();
+    const conteudo = JSON.stringify(db, null, 2);
+    await writable.write(conteudo);
+    await writable.close();
+    lastHash = conteudo;
+}
+
+// ---------------- GESTÃO DE PRATELEIRAS ----------------
+async function adicionarPrateleira(){
+    const nome = document.getElementById("nomePrateleiraNova").value.trim();
+    if(!nome) return;
+    if(db.prateleiras.find(p => p.nome === nome)) return alert("Prateleira já existe!");
+    
+    db.prateleiras.push({ nome: nome, capacidade: 78 }); // 13x6
+    await salvarDB();
+    document.getElementById("nomePrateleiraNova").value = "";
+    atualizarInterface();
+}
+
+async function excluirPrateleira(nome){
+    if(db.caixas.some(c => c.prateleira === nome)) return alert("Não é possível excluir uma prateleira com caixas dentro!");
+    if(confirm(`Excluir prateleira ${nome}?`)){
+        db.prateleiras = db.prateleiras.filter(p => p.nome !== nome);
+        await salvarDB();
+        atualizarInterface();
+    }
+}
+
+// ---------------- INTERFACE ----------------
+function atualizarInterface(){
+    renderSelectPrateleiras();
+    listar();
+    renderConfigPrateleiras();
+    if(document.getElementById("dashboardTela").style.display !== "none") atualizarDashboard();
+}
+
+function renderSelectPrateleiras(){
+    const sel = document.getElementById("prateleiraSelect");
+    const valorAtual = sel.value;
+    sel.innerHTML = '<option value="">Selecione a Prateleira...</option>';
+    db.prateleiras.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.nome;
+        opt.text = p.nome;
+        sel.appendChild(opt);
+    });
+    sel.value = valorAtual;
+}
+
+function renderConfigPrateleiras(){
+    const tbody = document.getElementById("listaPrateleirasConfig");
+    tbody.innerHTML = "";
+    db.prateleiras.forEach(p => {
+        const qtd = db.caixas.filter(c => c.prateleira === p.nome).length;
+        tbody.innerHTML += `<tr>
+            <td><b>${p.nome}</b></td>
+            <td>${qtd} / 78 caixas (${Math.round(qtd/78*100)}%)</td>
+            <td><button style="background:#e74c3c" onclick="excluirPrateleira('${p.nome}')">Excluir</button></td>
+        </tr>`;
+    });
+}
+
+// ---------------- CRUD CAIXAS ----------------
+async function salvar(e){
+    e.preventDefault();
+    await carregarDB(true);
+
+    const item = {
+        caixa: document.getElementById("caixa").value,
+        inicio: document.getElementById("inicio").value,
+        fim: document.getElementById("fim").value,
+        validade: document.getElementById("validade").value,
+        prateleira: document.getElementById("prateleiraSelect").value,
+        nivel: parseInt(document.getElementById("nivel").value),
+        espaco: parseInt(document.getElementById("espaco").value),
+        status: document.getElementById("status").value,
+        usuario: document.getElementById("usuarioStatus").value,
+        dataUpdate: new Date().toLocaleString()
+    };
+
+    // Validação de Posição
+    const ocupado = db.caixas.find((c, idx) => 
+        c.prateleira === item.prateleira && c.nivel === item.nivel && c.espaco === item.espaco && idx !== edit
+    );
+    if(ocupado) return alert(`ERRO: Posição ocupada pela caixa ${ocupado.caixa}`);
+
+    if(edit !== null) db.caixas[edit] = item;
+    else db.caixas.push(item);
+
+    await salvarDB();
+    cancelarEdicao();
+    atualizarInterface();
+}
+
+function listar(){
+    const lista = document.getElementById("lista");
+    const busca = document.getElementById("buscarCaixa").value.toLowerCase();
+    const filtrados = db.caixas.filter(c => c.caixa.toLowerCase().includes(busca));
+    
+    lista.innerHTML = "";
+    filtrados.slice(0, 50).forEach((c, i) => {
+        const indexReal = db.caixas.indexOf(c);
+        lista.innerHTML += `<tr onclick="detalhes(${indexReal})">
+            <td>${c.caixa}</td>
+            <td><span class="badge" style="background:${getColor(c.status)}">${c.status}</span></td>
+            <td>${c.prateleira} - N${c.nivel} - S${c.espaco}</td>
+            <td>
+                <button onclick="event.stopPropagation(); editar(${indexReal})">✏️</button>
+                <button style="background:#e74c3c" onclick="event.stopPropagation(); remover(${indexReal})">🗑️</button>
+            </td>
+        </tr>`;
+    });
+    mapa();
+}
+
+function getColor(s){
+    const colors = {Guardada:'#27ae60', Preparada:'#f1c40f', Digitalizada:'#3498db', Eliminada:'#e74c3c'};
+    return colors[s] || '#7f8c8d';
+}
+
+function editar(i){
+    const c = db.caixas[i];
+    document.getElementById("caixa").value = c.caixa;
+    document.getElementById("inicio").value = c.inicio;
+    document.getElementById("fim").value = c.fim;
+    document.getElementById("validade").value = c.validade;
+    document.getElementById("prateleiraSelect").value = c.prateleira;
+    document.getElementById("nivel").value = c.nivel;
+    document.getElementById("espaco").value = c.espaco;
+    document.getElementById("status").value = c.status;
+    document.getElementById("usuarioStatus").value = c.usuario;
+    edit = i;
+    document.getElementById("btnSalvar").innerText = "Atualizar";
+    document.getElementById("btnCancelar").style.display = "inline-block";
+}
+
+function cancelarEdicao(){
+    edit = null;
+    document.getElementById("cadastroForm").reset();
+    document.getElementById("btnSalvar").innerText = "Salvar";
+    document.getElementById("btnCancelar").style.display = "none";
+}
+
+async function remover(i){
+    if(confirm("Excluir esta caixa?")){
+        db.caixas.splice(i, 1);
+        await salvarDB();
+        atualizarInterface();
+    }
+}
+
+// ---------------- MAPA ----------------
+function mapa(){
+    const container = document.getElementById("mapa");
+    container.innerHTML = "";
+    db.prateleiras.forEach(p => {
+        const box = document.createElement("div");
+        box.className = "prateleiraBox";
+        box.innerHTML = `<h3>${p.nome}</h3>`;
+        for(let n=13; n>=1; n--){
+            const linha = document.createElement("div");
+            linha.className = "nivel";
+            linha.innerHTML = `<div class="nivelLabel">N${n}</div>`;
+            for(let e=1; e<=6; e++){
+                const idx = db.caixas.findIndex(c => c.prateleira === p.nome && c.nivel === n && c.espaco === e);
+                const slot = document.createElement("div");
+                if(idx !== -1){
+                    slot.className = "slot ocupado" + db.caixas[idx].status;
+                    slot.innerText = db.caixas[idx].caixa;
+                    slot.onclick = () => detalhes(idx);
+                } else {
+                    slot.className = "slot livre";
+                    slot.innerText = e;
+                }
+                linha.appendChild(slot);
+            }
+            box.appendChild(linha);
+        }
+        container.appendChild(box);
+    });
+}
+
+// ---------------- AUXILIARES ----------------
+function mostrarTela(t){
+    ["dashboardTela", "listaTela", "mapaTela", "configTela"].forEach(id => document.getElementById(id).style.display = "none");
+    document.getElementById(t).style.display = "block";
+    if(t==='dashboardTela') atualizarDashboard();
+    toggleMenu();
+}
+
+function toggleMenu(){
+    document.getElementById("menu").classList.toggle("show");
+    document.getElementById("hamburger").classList.toggle("active");
+}
+
+function detalhes(i){
+    const c = db.caixas[i];
+    document.getElementById("modalConteudo").innerHTML = `
+        <h3>Caixa: ${c.caixa}</h3>
+        <p><b>Local:</b> ${c.prateleira} (Nível ${c.nivel}, Espaço ${c.espaco})</p>
+        <p><b>Status:</b> ${c.status}</p>
+        <p><b>Validade:</b> ${c.validade}</p>
+        <p><b>Responsável:</b> ${c.usuario}</p>
+        <hr>
+        <button onclick="fecharModal()">Fechar</button>
+    `;
+    document.getElementById("modal").style.display = "flex";
+}
+function fecharModal(){ document.getElementById("modal").style.display="none"; }
+function buscarCaixa(){ listar(); }
+
+function atualizarDashboard(){
+    const resumo = document.getElementById("resumoPrateleiras");
+    resumo.innerHTML = "";
+    db.prateleiras.forEach(p => {
+        const qtd = db.caixas.filter(c => c.prateleira === p.nome).length;
+        resumo.innerHTML += `<div class="cardResumo"><b>${p.nome}</b><br>${qtd}/78</div>`;
+    });
+}
+</script>
+</body>
+</html>
