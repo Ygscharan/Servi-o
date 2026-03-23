@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Digitalização de Caixas</title>
+
+<style>
+:root{
+  --bg-light: #f4f6f9;
+  --bg-dark: #0f172a;
+  --card-light: rgba(255,255,255,0.95);
+  --card-dark: rgba(15,23,42,0.9);
+  --text-light: #1f2933;
+  --text-dark: #f1f5f9;
+  --primary: #3b82f6; 
+}
+
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  background: url('banner.jpg') no-repeat center/cover;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:0.3s;
+  overflow: hidden; /* Impede rolagem se a tela for pequena */
+}
+
+body.dark{
+  background-color: var(--bg-dark);
+}
+
+/* --- NOVO: TELA DE BLOQUEIO INICIAL (OVERLAY) --- */
+#overlayInicial {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.4s ease;
+}
+
+#overlayInicial.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay-card {
+  background: var(--card-light);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  max-width: 350px;
+}
+
+body.dark .overlay-card {
+  background: var(--card-dark);
+  color: var(--text-dark);
+}
+
+.overlay-card h3 { margin-top: 0; font-size: 22px; }
+.overlay-card p { opacity: 0.8; font-size: 15px; margin-bottom: 25px; }
+
+.btn-gigante {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+  transition: 0.2s;
+}
+
+.btn-gigante:hover { transform: scale(1.05); }
+/* ------------------------------------------------ */
+
+.topbar{
+  position:fixed;
+  top:15px;
+  left:15px;
+  display:flex;
+  gap:10px;
+}
+
+.topbar button{
+  padding:10px 16px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:14px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color:white;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+  transition:0.2s;
+}
+
+.topbar button:hover{
+  transform:translateY(-2px);
+}
+
+.status-badge {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: 0.3s;
+}
+
+.status-badge.offline {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.status-badge.online {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.status-badge.warning {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+}
+
+.card{
+  width:420px;
+  backdrop-filter: blur(12px);
+  background: var(--card-light);
+  border-radius:18px;
+  padding:28px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+  transition:0.3s;
+}
+
+body.dark .card{
+  background: var(--card-dark);
+  color:var(--text-dark);
+}
+
+h2{
+  margin-top:0;
+}
+
+.input-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:14px;
+}
+
+label{
+  font-size:13px;
+  opacity:0.7;
+}
+
+input, textarea{
+  width:100%;
+  box-sizing: border-box; /* Correção para o width não vazar o card */
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid #cbd5e1;
+  font-size:14px;
+  outline:none;
+  resize:none;
+  background:rgba(255,255,255,0.9);
+  color:#111;
+  transition:0.2s;
+}
+
+body.dark input,
+body.dark textarea{
+  background:#1e293b;
+  border:1px solid #334155;
+  color:white;
+}
+
+input:focus, textarea:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px rgba(59,130,246,0.2);
+}
+
+textarea{
+  height:120px;
+}
+
+.processar{
+  width:100%;
+  padding:13px;
+  margin-top:10px;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color:white;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.processar:hover{
+  transform:scale(1.02);
+}
+
+.log{
+  margin-top:16px;
+  font-size:13px;
+  max-height:160px;
+  overflow:auto;
+}
+
+.ok{color:#22c55e;}
+.erro{color:#ef4444;}
+.aviso{color:#eab308;}
+</style>
+</head>
+
+<body>
+
+<div id="overlayInicial">
+  <div class="overlay-card">
+    <h3>🔒 Conexão Necessária</h3>
+    <p>Clique no botão abaixo para permitir o acesso ao banco de dados e iniciar o sistema.</p>
+    <button class="btn-gigante" onclick="iniciar()">Permitir Acesso</button>
+  </div>
+</div>
+
+<div id="statusBadge" class="status-badge offline">🔴 Não conectado</div>
+
+<div class="topbar">
+  <button onclick="iniciar()">📂 Trocar Pasta</button>
+  <button onclick="toggleTheme()">🌙</button>
+</div>
+
+<div class="card">
+  <h2>🖨️ Digitalização</h2>
+
+  <div class="input-group">
+    <label>Nome do digitalizador</label>
+    <input id="digitalizador" placeholder="Digite seu nome">
+  </div>
+
+  <div class="input-group">
+    <label>Caixas prontas para scanner</label>
+    <textarea id="caixas" placeholder="Digite as caixas (uma por linha, espaço ou vírgula)"></textarea>
+  </div>
+
+  <button class="processar" onclick="processar()">Processar</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+if(localStorage.getItem("nivel") !== "digitalizacao"){
+  window.location.href="login.html";
+}
+
+let db = { caixas: [], prateleiras: [] };
+let pastaHandle;
+
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+}
+
+function abrirDBLocal() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('AppCaixas', 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore('configs');
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function salvarPastaHandle(handle) {
+  const dbLocal = await abrirDBLocal();
+  return new Promise((resolve) => {
+    const tx = dbLocal.transaction('configs', 'readwrite');
+    tx.objectStore('configs').put(handle, 'pastaHandle');
+    tx.oncomplete = () => resolve();
+  });
+}
+
+async function carregarPastaHandle() {
+  const dbLocal = await abrirDBLocal();
+  return new Promise((resolve) => {
+    const tx = dbLocal.transaction('configs', 'readonly');
+    const request = tx.objectStore('configs').get('pastaHandle');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+}
+
+async function carregarDB(){
+  const arquivo = await pastaHandle.getFileHandle("banco_erp.json", {create:true});
+  const file = await arquivo.getFile();
+  const texto = await file.text();
+  db = texto ? JSON.parse(texto) : { caixas: [], prateleiras: [] };
+}
+
+async function salvarDB(){
+  const arquivo = await pastaHandle.getFileHandle("banco_erp.json", {create:true});
+  const writable = await arquivo.createWritable();
+  await writable.write(JSON.stringify(db, null, 2));
+  await writable.close();
+}
+
+function atualizarInterfaceConexao(conectado, aviso = false) {
+  const statusBadge = document.getElementById("statusBadge");
+  const logDiv = document.getElementById("log");
+  const overlay = document.getElementById("overlayInicial");
+  
+  if (conectado) {
+    statusBadge.className = "status-badge online";
+    statusBadge.innerHTML = "🟢 Conectado";
+    logDiv.innerHTML = '<div class="ok">📂 Banco de dados carregado com sucesso!</div>';
+    overlay.classList.add("oculto"); // ESCONDE A TELA DE BLOQUEIO
+  } else if (aviso) {
+    statusBadge.className = "status-badge warning";
+    statusBadge.innerHTML = "🟡 Aguardando Permissão";
+    overlay.classList.remove("oculto"); // MOSTRA A TELA DE BLOQUEIO
+  } else {
+    statusBadge.className = "status-badge offline";
+    statusBadge.innerHTML = "🔴 Não conectado";
+    overlay.classList.remove("oculto"); // MOSTRA A TELA DE BLOQUEIO
+  }
+}
+
+// Ao carregar a página, verifica se já tem permissão
+window.addEventListener('DOMContentLoaded', async () => {
+  const handleSalvo = await carregarPastaHandle();
+  if (handleSalvo) {
+    pastaHandle = handleSalvo;
+    const permissao = await pastaHandle.queryPermission({ mode: 'readwrite' });
+    
+    if (permissao === 'granted') {
+      await carregarDB();
+      atualizarInterfaceConexao(true); // Se já tiver, a tela de bloqueio some instantaneamente
+    } else {
+      atualizarInterfaceConexao(false, true); // Fica aguardando o clique na tela de bloqueio
+    }
+  } else {
+    atualizarInterfaceConexao(false); // Fica aguardando selecionar a pasta pela primeira vez
+  }
+});
+
+async function iniciar(){
+  try{
+    if (pastaHandle) {
+      // Como o clique veio do botão gigante, o navegador aceita esse pedido de permissão!
+      const permissao = await pastaHandle.requestPermission({ mode: 'readwrite' });
+      if (permissao === 'granted') {
+        await carregarDB();
+        atualizarInterfaceConexao(true);
+        return; 
+      }
+    }
+
+    pastaHandle = await window.showDirectoryPicker();
+    await salvarPastaHandle(pastaHandle); 
+    await carregarDB();
+    atualizarInterfaceConexao(true);
+    
+  }catch(e){
+    console.error("Erro na conexão:", e);
+    atualizarInterfaceConexao(false);
+  }
+}
+
+async function processar(){
+  if(!pastaHandle){
+    alert("Conecte ao banco de dados primeiro!");
+    return;
+  }
+
+  const nome = document.getElementById("digitalizador").value.trim();
+  const texto = document.getElementById("caixas").value.trim();
+
+  if(!nome) return alert("Digite o digitalizador");
+  if(!texto) return alert("Digite pelo menos uma caixa");
+
+  const linhas = texto.split(/\n|,| /);
+  let logHTML = "";
+
+  for(let cx of linhas){
+    const caixa = cx.trim();
+    if(!caixa) continue;
+
+    const item = db.caixas.find(c => c.caixa === caixa);
+
+    if(!item){
+      logHTML += `<div class="erro">❌ ${caixa} não existe</div>`;
+      continue;
+    }
+
+    if(item.status !== "Preparada"){
+      logHTML += `<div class="erro">⚠️ ${caixa} bloqueada. O status atual é "${item.status}". A caixa precisa estar "Preparada" antes de ir para o scanner.</div>`;
+      continue;
+    }
+
+    item.status = "Digitalizada";
+    item.usuario = nome;
+    item.dataUpdate = new Date().toLocaleString();
+
+    logHTML += `<div class="ok">✅ ${caixa} enviada como digitalizada</div>`;
+  }
+
+  await salvarDB();
+  document.getElementById("log").innerHTML = logHTML;
+  document.getElementById("caixas").value = "";
+}
+</script>
+
+</body>
+</html>

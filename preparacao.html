@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Preparação de Caixas</title>
+
+<style>
+:root{
+  --bg-light: #f4f6f9;
+  --bg-dark: #0f172a;
+  --card-light: rgba(255,255,255,0.95);
+  --card-dark: rgba(30, 41, 59, 0.95); /* Deixei o card um pouco mais claro que o fundo escuro para destacar */
+  --text-light: #1f2933;
+  --text-dark: #f8fafc;
+  --primary: #22c55e;
+}
+
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  background: url('banner.jpg') no-repeat center/cover;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:0.3s;
+  overflow: hidden; 
+}
+
+body.dark{
+  background-color: var(--bg-dark);
+}
+
+/* --- TELA DE BLOQUEIO INICIAL (OVERLAY) --- */
+#overlayInicial {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.4s ease;
+}
+
+#overlayInicial.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay-card {
+  background: var(--card-light);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  max-width: 350px;
+}
+
+body.dark .overlay-card {
+  background: var(--card-dark);
+  color: var(--text-dark);
+  border: 1px solid rgba(255,255,255,0.05); /* Bordinha sutil no modo escuro */
+}
+
+.overlay-card h3 { margin-top: 0; font-size: 22px; }
+.overlay-card p { opacity: 0.8; font-size: 15px; margin-bottom: 25px; }
+
+.btn-gigante {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4);
+  transition: 0.2s;
+}
+
+.btn-gigante:hover { transform: scale(1.05); }
+
+/* --- BARRA E STATUS --- */
+.topbar{
+  position:fixed;
+  top:15px;
+  left:15px;
+  display:flex;
+  gap:10px;
+}
+
+.topbar button{
+  padding:10px 16px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:14px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color:white;
+  box-shadow:0 4px 12px rgba(0,0,0,0.25);
+  transition:0.2s;
+}
+
+.topbar button:hover{
+  transform:translateY(-2px);
+}
+
+.status-badge {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: 0.3s;
+}
+
+.status-badge.offline { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.status-badge.online { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.status-badge.warning { background: linear-gradient(135deg, #eab308, #ca8a04); }
+
+/* --- CARD PRINCIPAL --- */
+.card{
+  width:420px;
+  backdrop-filter: blur(12px);
+  background: var(--card-light);
+  border-radius:18px;
+  padding:28px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.4);
+  transition:0.3s;
+}
+
+body.dark .card{
+  background: var(--card-dark);
+  color: var(--text-dark);
+  border: 1px solid rgba(255,255,255,0.08); /* Bordinha sutil */
+}
+
+h2{ margin-top:0; }
+
+.input-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:14px;
+}
+
+label{
+  font-size:13px;
+  opacity:0.8;
+  font-weight: bold;
+}
+
+body.dark label {
+  color: #cbd5e1;
+}
+
+input, textarea{
+  width:100%;
+  box-sizing: border-box;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid #cbd5e1;
+  font-size:14px;
+  outline:none;
+  resize:none;
+  background:rgba(255,255,255,0.9);
+  color:#111;
+  transition:0.2s;
+}
+
+/* Ajustes finos do MODO ESCURO para Inputs */
+body.dark input,
+body.dark textarea{
+  background: rgba(15, 23, 42, 0.6); /* Escurece os inputs para dar profundidade */
+  border: 1px solid #475569;
+  color: #f8fafc;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #94a3b8; /* Placeholder mais legível no escuro */
+}
+
+input:focus, textarea:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px rgba(34,197,94,0.2);
+}
+
+textarea{ height:120px; }
+
+.processar{
+  width:100%;
+  padding:13px;
+  margin-top:10px;
+  border:none;
+  border-radius:12px;
+  font-size:15px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color:white;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.processar:hover{ transform:scale(1.02); }
+.processar:active{ transform:scale(0.98); }
+
+/* --- ESTILIZAÇÃO DINÂMICA DO LOG --- */
+.log{
+  margin-top:16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size:13.5px;
+  max-height:160px;
+  overflow:auto;
+}
+
+/* Animação de pulo nas mensagens novas */
+@keyframes popIn {
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.log-item {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* Cores modernas para os logs */
+.log-item.ok { background: rgba(34, 197, 94, 0.15); border-left: 4px solid #22c55e; color: #15803d; }
+body.dark .log-item.ok { color: #4ade80; }
+
+.log-item.erro { background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; color: #b91c1c; }
+body.dark .log-item.erro { color: #f87171; }
+
+.log-item.aviso { background: rgba(234, 179, 8, 0.15); border-left: 4px solid #eab308; color: #a16207; }
+body.dark .log-item.aviso { color: #facc15; }
+
+/* --- EFEITO DE PARTICULAS (CONFETE) --- */
+.particula {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 9999;
+  animation: cairEfeito 1s ease-out forwards;
+}
+
+@keyframes cairEfeito {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(120px) scale(0); opacity: 0; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="overlayInicial">
+  <div class="overlay-card">
+    <h3>🔒 Conexão Necessária</h3>
+    <p>Clique no botão abaixo para permitir o acesso ao banco de dados e iniciar o sistema.</p>
+    <button class="btn-gigante" onclick="iniciar()">Permitir Acesso</button>
+  </div>
+</div>
+
+<div id="statusBadge" class="status-badge offline">🔴 Não conectado</div>
+
+<div class="topbar">
+  <button onclick="iniciar()">📂 Trocar Pasta</button>
+  <button onclick="toggleTheme()">🌙</button>
+</div>
+
+<div class="card">
+  <h2>📦 Preparação</h2>
+
+  <div class="input-group">
+    <label>Nome do preparador</label>
+    <input id="preparador" placeholder="Digite seu nome">
+  </div>
+
+  <div class="input-group">
+    <label>Caixas</label>
+    <textarea id="caixas" placeholder="Digite as caixas (uma por linha, espaço ou vírgula)"></textarea>
+  </div>
+
+  <button class="processar" onclick="processar(event)">Processar</button>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+if(localStorage.getItem("nivel") !== "preparacao"){
+  window.location.href="login.html";
+}
+
+let db = { caixas: [], prateleiras: [] };
+let pastaHandle;
+
+function toggleTheme(){
+  document.body.classList.toggle("dark");
+}
+
+function abrirDBLocal() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('AppCaixas', 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore('configs');
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function salvarPastaHandle(handle) {
+  const dbLocal = await abrirDBLocal();
+  return new Promise((resolve) => {
+    const tx = dbLocal.transaction('configs', 'readwrite');
+    tx.objectStore('configs').put(handle, 'pastaHandle');
+    tx.oncomplete = () => resolve();
+  });
+}
+
+async function carregarPastaHandle() {
+  const dbLocal = await abrirDBLocal();
+  return new Promise((resolve) => {
+    const tx = dbLocal.transaction('configs', 'readonly');
+    const request = tx.objectStore('configs').get('pastaHandle');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+}
+
+async function carregarDB(){
+  const arquivo = await pastaHandle.getFileHandle("banco_erp.json", {create:true});
+  const file = await arquivo.getFile();
+  const texto = await file.text();
+  db = texto ? JSON.parse(texto) : { caixas: [], prateleiras: [] };
+}
+
+async function salvarDB(){
+  const arquivo = await pastaHandle.getFileHandle("banco_erp.json", {create:true});
+  const writable = await arquivo.createWritable();
+  await writable.write(JSON.stringify(db, null, 2));
+  await writable.close();
+}
+
+function atualizarInterfaceConexao(conectado, aviso = false) {
+  const statusBadge = document.getElementById("statusBadge");
+  const logDiv = document.getElementById("log");
+  const overlay = document.getElementById("overlayInicial");
+  
+  if (conectado) {
+    statusBadge.className = "status-badge online";
+    statusBadge.innerHTML = "🟢 Conectado";
+    logDiv.innerHTML = '<div class="log-item ok">📂 Banco de dados carregado com sucesso!</div>';
+    overlay.classList.add("oculto"); 
+  } else if (aviso) {
+    statusBadge.className = "status-badge warning";
+    statusBadge.innerHTML = "🟡 Aguardando Permissão";
+    overlay.classList.remove("oculto"); 
+  } else {
+    statusBadge.className = "status-badge offline";
+    statusBadge.innerHTML = "🔴 Não conectado";
+    overlay.classList.remove("oculto"); 
+  }
+}
+
+// Ao carregar a página, verifica se já tem permissão
+window.addEventListener('DOMContentLoaded', async () => {
+  const handleSalvo = await carregarPastaHandle();
+  if (handleSalvo) {
+    pastaHandle = handleSalvo;
+    const permissao = await pastaHandle.queryPermission({ mode: 'readwrite' });
+    
+    if (permissao === 'granted') {
+      await carregarDB();
+      atualizarInterfaceConexao(true); 
+    } else {
+      atualizarInterfaceConexao(false, true); 
+    }
+  } else {
+    atualizarInterfaceConexao(false); 
+  }
+});
+
+async function iniciar(){
+  try{
+    if (pastaHandle) {
+      const permissao = await pastaHandle.requestPermission({ mode: 'readwrite' });
+      if (permissao === 'granted') {
+        await carregarDB();
+        atualizarInterfaceConexao(true);
+        return; 
+      }
+    }
+
+    pastaHandle = await window.showDirectoryPicker();
+    await salvarPastaHandle(pastaHandle); 
+    await carregarDB();
+    atualizarInterfaceConexao(true);
+    
+  }catch(e){
+    console.error("Erro na conexão:", e);
+    atualizarInterfaceConexao(false);
+  }
+}
+
+// Função para criar as partículas quando houver sucesso
+function criarEfeitoSucesso(botaoElemento) {
+  const rect = botaoElemento.getBoundingClientRect();
+  const xCentro = rect.left + rect.width / 2;
+  const yTopo = rect.top;
+
+  for (let i = 0; i < 20; i++) {
+    let p = document.createElement("div");
+    p.className = "particula";
+    
+    // Espalha as partículas horizontalmente e varia o tamanho
+    p.style.left = (xCentro + (Math.random() - 0.5) * 150) + "px";
+    p.style.top = (yTopo + (Math.random() - 0.5) * 20) + "px";
+    p.style.width = (Math.random() * 8 + 4) + "px";
+    p.style.height = p.style.width;
+    
+    // Cores das partículas (tons de verde, amarelo e branco)
+    const cores = ["#22c55e", "#4ade80", "#bef264", "#ffffff"];
+    p.style.backgroundColor = cores[Math.floor(Math.random() * cores.length)];
+    
+    document.body.appendChild(p);
+    
+    // Remove do HTML depois de terminar a animação (1 segundo)
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+
+async function processar(event){
+  if(!pastaHandle){
+    alert("Conecte ao banco de dados primeiro!");
+    return;
+  }
+
+  const nome = document.getElementById("preparador").value.trim();
+  const texto = document.getElementById("caixas").value.trim();
+
+  if(!nome) return alert("Digite o preparador");
+  if(!texto) return alert("Digite pelo menos uma caixa");
+
+  const linhas = texto.split(/\n|,| /);
+  let logHTML = "";
+  let sucessoNestaAcao = false;
+
+  for(let cx of linhas){
+    const caixa = cx.trim();
+    if(!caixa) continue;
+
+    const item = db.caixas.find(c => c.caixa === caixa);
+
+    if(!item){
+      logHTML += `<div class="log-item erro">❌ ${caixa} não existe</div>`;
+      continue;
+    }
+
+    if(item.status !== "Guardada"){
+      logHTML += `<div class="log-item aviso">⚠️ ${caixa} já está ${item.status}</div>`;
+      continue;
+    }
+
+    item.status = "Preparada";
+    item.usuario = nome;
+    item.dataUpdate = new Date().toLocaleString();
+
+    logHTML += `<div class="log-item ok">✅ ${caixa} preparada</div>`;
+    sucessoNestaAcao = true; // Marca que pelo menos uma caixa foi com sucesso
+  }
+
+  await salvarDB();
+  document.getElementById("log").innerHTML = logHTML;
+  document.getElementById("caixas").value = "";
+
+  // Dispara os efeitos visuais de festa/confete apenas se houve sucesso
+  if(sucessoNestaAcao) {
+    criarEfeitoSucesso(event.target);
+  }
+}
+</script>
+
+</body>
+</html>
