@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Estoque ERP - Gestão de Estrutura</title>
+    <style>
+        body{font-family:Arial;background:#f4f6f9;margin:0;}
+        header{background:#2c3e50;color:white;padding:15px;font-size:22px;display:flex;justify-content:space-between;align-items:center;}
+        .hamburger{width:30px;height:22px;position:relative;cursor:pointer;z-index:101;}
+        .hamburger span{position:absolute;height:3px;width:100%;background:white;border-radius:2px;transition:0.3s;}
+        .hamburger span:nth-child(1){top:0;} .hamburger span:nth-child(2){top:9px;} .hamburger span:nth-child(3){top:18px;}
+        .hamburger.active span:nth-child(1){transform:rotate(45deg);top:9px;}
+        .hamburger.active span:nth-child(2){opacity:0;}
+        .hamburger.active span:nth-child(3){transform:rotate(-45deg);top:9px;}
+        .menu{position:absolute;top:65px;right:20px;background:#34495e;box-shadow:0 5px 15px rgba(0,0,0,0.3);border-radius:8px;display:flex;flex-direction:column;min-width:200px;opacity:0;transform:translateY(-10px);pointer-events:none;transition:0.25s;z-index:100;}
+        .menu.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+        .menu button, .menu label{color:white;padding:12px;cursor:pointer;border:none;background:none;text-align:left;font-size:14px;}
+        .menu button:hover, .menu label:hover{background:#2c3e50;}
+        .container{padding:20px;max-width:1300px;margin:auto;}
+        form, .card{background:white;padding:15px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+        input,select{padding:8px;margin:5px;border:1px solid #ccc;border-radius:4px;}
+        button{padding:8px 14px;cursor:pointer;border:none;background:#3498db;color:white;border-radius:4px;}
+        button:hover{background:#2980b9;}
+        table{width:100%;border-collapse:collapse;background:white;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+        th,td{padding:10px;border-bottom:1px solid #ddd;text-align:center;}
+        .prateleiraBox{background:white;padding:15px;margin-top:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+        .nivel{display:flex;gap:6px;margin:4px 0;align-items:center;}
+        .nivelLabel{width:60px;font-weight:bold;}
+        .slot{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:white;font-size:11px;font-weight:bold;cursor:pointer;}
+        .livre{background:#27ae60;}
+        .ocupadoGuardada{background:#27ae60;}
+        .ocupadoPreparada{background:#f1c40f;}
+        .ocupadoDigitalizada{background:#3498db;}
+        .ocupadoEliminada{background:#e74c3c;}
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;}
+        .modalBox{background:white;padding:20px;border-radius:8px;width:400px;max-height:90vh;overflow-y:auto;}
+        .modalBox.modal-wide{max-width:520px;width:92vw;}
+        .status-sync{font-size: 10px; color: #bdc3c7; margin-left:10px;}
+        .badge{padding:4px 8px; border-radius:10px; font-size:11px; color:white; background:#7f8c8d; margin-right:2px;}
+        .processo-tag{background: #ecf0f1; color: #2c3e50; padding: 2px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #bdc3c7; margin: 2px; display: inline-block;}
+        #processosContainer{display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; margin: 10px 0;}
+        .dashboard-filtros h3{margin-top:0;font-size:16px;color:#2c3e50;}
+        .filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;align-items:end;margin-top:10px;}
+        .filter-field label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:bold;}
+        .filter-field input[type="text"],.filter-field input[type="date"],.filter-field select{width:100%;max-width:100%;box-sizing:border-box;}
+        .filter-status-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 0;}
+        .filter-status-row label{font-weight:normal;font-size:13px;cursor:pointer;}
+        .dashboard-kpis{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0;}
+        .kpi-card{background:white;padding:16px 18px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.12);min-width:130px;flex:1;}
+        .kpi-card .kpi-val{font-size:26px;font-weight:bold;color:#2c3e50;}
+        .kpi-card .kpi-lbl{font-size:12px;color:#7f8c8d;text-transform:uppercase;letter-spacing:0.03em;}
+        .kpi-card .kpi-sub{font-size:11px;color:#95a5a6;margin-top:6px;}
+        .dashboard-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-top:8px;}
+        .chart-card h4{margin:0 0 10px 0;font-size:15px;color:#2c3e50;}
+        .chart-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;}
+        .chart-controls label{font-size:12px;color:#555;}
+        .chart-controls select{min-width:160px;}
+        .chart-wrap{position:relative;height:300px;max-width:100%;}
+        .dash-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;}
+        .dash-empty{padding:24px;text-align:center;color:#7f8c8d;font-size:14px;}
+        .kpi-inline{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+        .kpi-inline span{font-size:11px;padding:4px 8px;border-radius:6px;color:#fff;}
+        .lancamento-intro{color:#555;font-size:14px;margin:0 0 16px 0;max-width:720px;}
+        .lancamento-secao{margin-bottom:18px;}
+        .lancamento-secao h3{margin:0 0 10px 0;font-size:15px;color:#2c3e50;border-bottom:2px solid #ecf0f1;padding-bottom:6px;}
+        .lancamento-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;align-items:end;}
+        .lancamento-grid .campo label{display:block;font-size:12px;font-weight:bold;color:#555;margin-bottom:4px;}
+        .lancamento-grid .campo input,.lancamento-grid .campo select{width:100%;max-width:100%;box-sizing:border-box;margin:0;}
+        #mapaLancamento{display:none;margin-top:12px;}
+        #mapaLancamento .prateleiraBox{margin-top:0;}
+        .mapaLegendaLanc{margin:0 0 8px 0;color:#7f8c8d;font-size:12px;}
+        .slot.slotSelecionado{box-shadow:0 0 0 3px #2c3e50,0 0 0 5px #fff;transform:scale(1.08);z-index:2;}
+        .slot.slotOcupadoOutro{cursor:not-allowed;opacity:0.95;}
+        .slot.slotEdicaoAtual{box-shadow:0 0 0 2px dashed #fff;}
+        .posicaoResumo{font-size:14px;margin-top:10px;padding:10px 12px;background:#eaf2f8;border-radius:6px;color:#2c3e50;}
+        .posicaoResumo.vazio{background:#fdeaea;color:#c0392b;}
+        .lancamento-acoes{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+        #msgLancamentoOk{font-size:13px;color:#27ae60;font-weight:bold;display:none;}
+        #barraReconectarPasta{display:none;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;background:#f9e79f;color:#2c3e50;padding:10px 16px;font-size:14px;border-bottom:1px solid #f1c40f;}
+        #barraReconectarPasta button{padding:8px 14px;cursor:pointer;border:none;border-radius:4px;}
+        #barraReconectarPasta .btn-prim{background:#2c3e50;color:#fff;}
+        #barraReconectarPasta .btn-prim:hover{background:#34495e;}
+        #barraReconectarPasta .btn-sec{background:#ecf0f1;color:#2c3e50;}
+        #barraReconectarPasta .btn-sec:hover{background:#bdc3c7;}
+        .historico-caixa{max-height:280px;overflow-y:auto;text-align:left;margin:12px 0;font-size:13px;border:1px solid #e0e0e0;border-radius:8px;padding:0;background:#fafbfc;}
+        .historico-item{border-bottom:1px solid #ecf0f1;padding:10px 12px;}
+        .historico-item:last-child{border-bottom:none;}
+        .historico-item .hi-top{color:#7f8c8d;font-size:11px;margin-bottom:6px;}
+        .historico-item .hi-tipo{font-weight:bold;color:#2c3e50;font-size:12px;}
+        .historico-mud{margin:4px 0 0 0;padding-left:12px;border-left:3px solid #3498db;color:#34495e;font-size:12px;line-height:1.45;}
+        .historico-vazio{color:#95a5a6;font-size:13px;padding:12px;text-align:center;}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+    <div>📦 ERP Estoque <span id="syncLabel" class="status-sync">...</span></div>
+    <div class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+    <div class="menu" id="menu">
+        <button onclick="mostrarTela('dashboardTela')">📊 Dashboard</button>
+        <button onclick="mostrarTela('lancamentoTela')">📝 Lançamento de Caixa</button>
+        <button onclick="mostrarTela('listaTela')">📋 Lista de Caixas</button>
+        <button onclick="mostrarTela('mapaTela')">🗺️ Mapa de Prateleiras</button>
+        <button onclick="mostrarTela('configTela')">⚙️ Config. Prateleiras</button>
+        <button onclick="mostrarTela('processoTela')">📂 Gerenciar Processos</button>
+        <hr>
+        <button onclick="selecionarPasta()">📂 Alterar Pasta</button>
+    </div>
+</header>
+
+<div id="barraReconectarPasta" role="region" aria-label="Reconectar pasta de dados">
+    <span id="barraReconectarTexto"></span>
+    <button type="button" class="btn-prim" onclick="reconectarPastaSalva()">Permitir acesso à pasta salva</button>
+    <button type="button" class="btn-sec" onclick="escolherOutraPastaManual()">Escolher outra pasta…</button>
+</div>
+
+<div class="container">
+
+    <div id="configTela" style="display:none">
+        <h2>⚙️ Gerenciar Estrutura</h2>
+        <div class="card">
+            <h3>Nova Prateleira</h3>
+            <p><small>Cada prateleira terá automaticamente 13 níveis com 6 espaços (Capacidade: 78 caixas).</small></p>
+            <input id="nomePrateleiraNova" placeholder="Nome (Ex: Setor A)">
+            <button onclick="adicionarPrateleira()">Cadastrar Prateleira</button>
+        </div>
+        <table>
+            <thead><tr><th>Nome</th><th>Ocupação</th><th>Ações</th></tr></thead>
+            <tbody id="listaPrateleirasConfig"></tbody>
+        </table>
+    </div>
+
+    <div id="processoTela" style="display:none">
+        <h2>📂 Gerenciar Processos</h2>
+        <div class="card">
+            <h3>Novo Processo</h3>
+            <p><small>Cadastre os tipos de processos/setores para atribuir às caixas.</small></p>
+            <input id="nomeProcessoNovo" placeholder="Nome (Ex: Recursos Humanos)">
+            <button onclick="adicionarProcesso()">Cadastrar Processo</button>
+        </div>
+        <table>
+            <thead><tr><th>Processo</th><th>Ações</th></tr></thead>
+            <tbody id="listaProcessosConfig"></tbody>
+        </table>
+    </div>
+
+    <div id="lancamentoTela" style="display:none">
+        <h2>📝 Lançamento de Caixa</h2>
+        <p class="lancamento-intro">Preencha os dados da caixa, escolha a <strong>prateleira</strong> e clique em um <strong>espaço livre</strong> no mapa (mesma vista do mapa de ocupação). Posições ocupadas por outras caixas não podem ser usadas.</p>
+
+        <form id="cadastroForm" onsubmit="salvar(event)">
+            <div class="card">
+                <div class="lancamento-secao">
+                    <h3>1 · Identificação e prazos</h3>
+                    <div class="lancamento-grid">
+                        <div class="campo">
+                            <label for="caixa">Número da caixa</label>
+                            <input id="caixa" placeholder="Ex.: 2024-001" required autocomplete="off">
+                        </div>
+                        <div class="campo">
+                            <label for="inicio">Data de início</label>
+                            <input type="date" id="inicio" required title="Data de início do conteúdo">
+                        </div>
+                        <div class="campo">
+                            <label for="fim">Data fim <span style="font-weight:normal;color:#888">(opcional)</span></label>
+                            <input type="date" id="fim" title="Data fim">
+                        </div>
+                        <div class="campo">
+                            <label for="validade">Validade</label>
+                            <input type="date" id="validade" required title="Data de validade">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lancamento-secao">
+                    <h3>2 · Onde guardar na prateleira</h3>
+                    <div class="campo" style="max-width:360px;">
+                        <label for="prateleiraSelect">Prateleira</label>
+                        <select id="prateleiraSelect" required onchange="onPrateleiraLancamentoChange()">
+                            <option value="">Selecione a prateleira…</option>
+                        </select>
+                    </div>
+                    <p id="mapaLancamentoPlaceholder" class="mapaLegendaLanc" style="margin-top:8px;">Selecione uma prateleira para ver o mapa e escolher nível e espaço.</p>
+                    <div id="mapaLancamento"></div>
+                    <input type="hidden" id="nivel" value="">
+                    <input type="hidden" id="espaco" value="">
+                    <div id="posicaoLancamentoResumo" class="posicaoResumo vazio" role="status">Nenhuma posição selecionada — clique em um espaço <strong>verde</strong> no mapa.</div>
+                </div>
+
+                <div class="lancamento-secao">
+                    <h3>3 · Situação e responsável</h3>
+                    <div class="lancamento-grid">
+                        <div class="campo">
+                            <label for="status">Status</label>
+                            <select id="status">
+                                <option value="Guardada">Guardada</option>
+                                <option value="Preparada">Preparada</option>
+                                <option value="Digitalizada">Digitalizada</option>
+                                <option value="Eliminada">Eliminada</option>
+                            </select>
+                        </div>
+                        <div class="campo">
+                            <label for="usuarioStatus">Responsável</label>
+                            <input id="usuarioStatus" placeholder="Nome do responsável" autocomplete="name">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lancamento-secao">
+                    <h3>4 · Processos vinculados</h3>
+                    <p style="margin:0 0 8px 0;font-size:13px;color:#666;">Marque um ou mais processos que se aplicam a esta caixa.</p>
+                    <div id="processosContainer"></div>
+                </div>
+
+                <div class="lancamento-acoes">
+                    <button type="submit" id="btnSalvar">Salvar</button>
+                    <button type="button" id="btnCancelar" style="display:none;background:#95a5a6" onclick="cancelarEdicao()">Cancelar edição</button>
+                    <span id="msgLancamentoOk">✓ Salvo. Você pode lançar outra caixa.</span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div id="dashboardTela" style="display:none">
+        <h2>📊 Dashboard analítico</h2>
+        <p style="color:#555;font-size:14px;margin:0 0 12px 0;">Filtre as caixas, acompanhe indicadores e monte gráficos com o tipo e a dimensão que fizerem sentido para você.</p>
+
+        <div class="card dashboard-filtros">
+            <h3>🔍 Filtros</h3>
+            <div class="filter-grid">
+                <div class="filter-field">
+                    <label for="dashBusca">Busca (caixa ou responsável)</label>
+                    <input type="text" id="dashBusca" placeholder="Ex.: 123 ou Maria">
+                </div>
+                <div class="filter-field">
+                    <label for="dashFiltroRapido">Filtro rápido por validade</label>
+                    <select id="dashFiltroRapido">
+                        <option value="">Nenhum</option>
+                        <option value="vencidas">Somente vencidas (validade &lt; hoje)</option>
+                        <option value="vence30">Vence nos próximos 30 dias</option>
+                        <option value="vence90">Vence nos próximos 90 dias</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="dashValidadeDe">Validade — de</label>
+                    <input type="date" id="dashValidadeDe">
+                </div>
+                <div class="filter-field">
+                    <label for="dashValidadeAte">Validade — até</label>
+                    <input type="date" id="dashValidadeAte">
+                </div>
+                <div class="filter-field">
+                    <label for="dashInicioDe">Início — de</label>
+                    <input type="date" id="dashInicioDe">
+                </div>
+                <div class="filter-field">
+                    <label for="dashInicioAte">Início — até</label>
+                    <input type="date" id="dashInicioAte">
+                </div>
+                <div class="filter-field">
+                    <label for="dashPrateleira">Prateleira</label>
+                    <select id="dashPrateleira">
+                        <option value="">Todas as prateleiras</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="dashProcesso">Processos <small style="font-weight:normal;color:#888">(Ctrl+clique para vários; vazio = todos)</small></label>
+                    <select id="dashProcesso" multiple size="5"></select>
+                </div>
+            </div>
+            <div class="filter-field" style="margin-top:14px;">
+                <label>Status</label>
+                <div class="filter-status-row" id="dashFiltroStatus">
+                    <label><input type="checkbox" name="dashSt" value="Guardada" checked> Guardada</label>
+                    <label><input type="checkbox" name="dashSt" value="Preparada" checked> Preparada</label>
+                    <label><input type="checkbox" name="dashSt" value="Digitalizada" checked> Digitalizada</label>
+                    <label><input type="checkbox" name="dashSt" value="Eliminada" checked> Eliminada</label>
+                </div>
+            </div>
+            <div class="dash-toolbar">
+                <button type="button" onclick="aplicarFiltrosDashboard()">Aplicar filtros</button>
+                <button type="button" style="background:#95a5a6" onclick="limparFiltrosDashboard()">Limpar filtros</button>
+            </div>
+        </div>
+
+        <div class="dashboard-kpis" id="dashboardKpis"></div>
+
+        <div class="dashboard-charts">
+            <div class="card chart-card">
+                <h4>Gráfico A</h4>
+                <div class="chart-controls">
+                    <label>Dimensão <select id="dashDim1">
+                        <option value="status">Por status</option>
+                        <option value="prateleira">Por prateleira</option>
+                        <option value="processo">Por processo (top 12)</option>
+                        <option value="nivel">Por nível (1–13)</option>
+                        <option value="usuario">Por responsável</option>
+                        <option value="mes_validade">Por mês da validade</option>
+                        <option value="mes_inicio">Por mês de início</option>
+                    </select></label>
+                    <label>Tipo <select id="dashTipo1">
+                        <option value="bar">Barras</option>
+                        <option value="pie">Pizza</option>
+                        <option value="doughnut">Rosca</option>
+                        <option value="line">Linha</option>
+                        <option value="polarArea">Área polar</option>
+                    </select></label>
+                </div>
+                <div class="chart-wrap"><canvas id="chartDashboard1"></canvas></div>
+            </div>
+            <div class="card chart-card">
+                <h4>Gráfico B</h4>
+                <div class="chart-controls">
+                    <label>Dimensão <select id="dashDim2">
+                        <option value="prateleira">Por prateleira</option>
+                        <option value="status">Por status</option>
+                        <option value="processo">Por processo (top 12)</option>
+                        <option value="nivel">Por nível (1–13)</option>
+                        <option value="usuario">Por responsável</option>
+                        <option value="mes_validade">Por mês da validade</option>
+                        <option value="mes_inicio">Por mês de início</option>
+                    </select></label>
+                    <label>Tipo <select id="dashTipo2">
+                        <option value="doughnut">Rosca</option>
+                        <option value="bar">Barras</option>
+                        <option value="pie">Pizza</option>
+                        <option value="line">Linha</option>
+                        <option value="polarArea">Área polar</option>
+                    </select></label>
+                </div>
+                <div class="chart-wrap"><canvas id="chartDashboard2"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="listaTela">
+        <h2>📋 Lista de Caixas</h2>
+        <input id="buscarCaixa" placeholder="🔎 Buscar caixa ou processo..." onkeyup="buscarCaixa()" style="width:300px;">
+        <table>
+            <thead><tr><th>Caixa</th><th>Processos</th><th>Status</th><th>Endereço</th><th>Ações</th></tr></thead>
+            <tbody id="lista"></tbody>
+        </table>
+    </div>
+
+    <div id="mapaTela" style="display:none">
+        <h2>🗺️ Mapa de Ocupação</h2>
+        <div id="mapa"></div>
+    </div>
+
+</div>
+
+<div class="modal" id="modal"><div class="modalBox" id="modalConteudo"></div></div>
+
+<script>
+    let db = { caixas: [], prateleiras: [], processos: [] };
+    let edit=null, pastaHandle, lastHash = "";
+    let _dashChart1 = null, _dashChart2 = null;
+    let dashProcessoInicializado = false;
+
+    const IDB_NOME = "erp-estoque-fs";
+    const IDB_STORE = "config";
+    const IDB_KEY_PASTA = "directoryHandle";
+    const IDB_VERSAO = 2;
+    let pastaHandlePendente = null;
+
+    function abrirIndexedDB(){
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(IDB_NOME, IDB_VERSAO);
+            req.onerror = () => reject(req.error);
+            req.onsuccess = () => resolve(req.result);
+            req.onupgradeneeded = (ev) => {
+                const database = ev.target.result;
+                if(!database.objectStoreNames.contains(IDB_STORE))
+                    database.createObjectStore(IDB_STORE);
+            };
+        });
+    }
+
+    async function salvarPastaNoIndice(dirHandle){
+        try{
+            const idb = await abrirIndexedDB();
+            await new Promise((resolve, reject) => {
+                const tx = idb.transaction(IDB_STORE, "readwrite");
+                tx.oncomplete = () => resolve();
+                tx.onabort = () => reject(tx.error || new Error("IndexedDB abort"));
+                tx.onerror = () => reject(tx.error);
+                tx.objectStore(IDB_STORE).put(dirHandle, IDB_KEY_PASTA);
+            });
+            const nome = dirHandle && dirHandle.name ? dirHandle.name : "";
+            if(nome){
+                localStorage.setItem("pastaId", nome);
+                localStorage.setItem("pastaNomeUltima", nome);
+            }
+        }catch(e){
+            console.error("Falha ao guardar pasta no IndexedDB:", e);
+            alert("Não foi possível memorizar a pasta neste navegador. Abra o app por http://localhost ou HTTPS e use Chrome/Edge. Evite abrir o arquivo direto (file://).");
+        }
+    }
+
+    async function lerPastaDoIndice(){
+        const idb = await abrirIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = idb.transaction(IDB_STORE, "readonly");
+            const req = tx.objectStore(IDB_STORE).get(IDB_KEY_PASTA);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    /** Só consulta — no carregamento da página não chame requestPermission (exige clique do usuário). */
+    async function permissaoJaConcedida(handle){
+        const opt = { mode: "readwrite" };
+        try{
+            if(typeof handle.queryPermission !== "function") return true;
+            return (await handle.queryPermission(opt)) === "granted";
+        }catch(e){
+            console.warn(e);
+            return false;
+        }
+    }
+
+    /** Depois do seletor de pasta o navegador ainda está em “gesto do usuário”; pode pedir permissão. */
+    async function garantirPermissaoAposSelecao(handle){
+        const opt = { mode: "readwrite" };
+        try{
+            if(typeof handle.queryPermission !== "function") return true;
+            if((await handle.queryPermission(opt)) === "granted") return true;
+            if(typeof handle.requestPermission === "function")
+                return (await handle.requestPermission(opt)) === "granted";
+        }catch(e){ console.warn(e); }
+        return false;
+    }
+
+    function mostrarBarraReconectar(nomePasta){
+        const bar = document.getElementById("barraReconectarPasta");
+        const txt = document.getElementById("barraReconectarTexto");
+        if(!bar || !txt) return;
+        const n = nomePasta || localStorage.getItem("pastaNomeUltima") || "sua pasta de dados";
+        txt.innerHTML = "Esta sessão precisa de <strong>um clique</strong> para voltar a acessar a pasta memorizada: <strong>" + escapeHtmlUi(n) + "</strong>. (O navegador exige isso ao reabrir.)";
+        bar.style.display = "flex";
+        document.getElementById("syncLabel").innerText = "Aguardando permissão…";
+    }
+
+    function esconderBarraReconectar(){
+        const bar = document.getElementById("barraReconectarPasta");
+        if(bar) bar.style.display = "none";
+        pastaHandlePendente = null;
+    }
+
+    function escapeHtmlUi(s){
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    async function reconectarPastaSalva(){
+        let h = pastaHandlePendente || await lerPastaDoIndice();
+        if(!h){
+            alert("Nenhuma pasta memorizada. Use o menu → Alterar pasta.");
+            return selecionarPasta();
+        }
+        try{
+            if(typeof h.requestPermission !== "function"){
+                pastaHandle = h;
+                await salvarPastaNoIndice(pastaHandle);
+                await carregarDB();
+                esconderBarraReconectar();
+                return;
+            }
+            const r = await h.requestPermission({ mode: "readwrite" });
+            if(r !== "granted"){
+                alert("Permissão negada. Tente de novo ou escolha outra pasta.");
+                return;
+            }
+            pastaHandle = h;
+            pastaHandlePendente = null;
+            await salvarPastaNoIndice(pastaHandle);
+            await carregarDB();
+            esconderBarraReconectar();
+        }catch(e){
+            console.error(e);
+            alert("Não foi possível restabelecer o acesso. Escolha a pasta novamente no menu.");
+        }
+    }
+
+    async function escolherOutraPastaManual(){
+        esconderBarraReconectar();
+        await selecionarPasta();
+        if(!pastaHandle)
+            document.getElementById("syncLabel").innerText = "Escolha a pasta no menu (☰)";
+    }
+
+    window.onload = async function(){
+        await inicializarPasta();
+        setInterval(async () => { if(pastaHandle && edit===null) await carregarDB(true); }, 5000);
+    };
+
+    async function inicializarPasta(){
+        if(!window.showDirectoryPicker){
+            alert("Este navegador não suporta escolha de pasta (use Chrome ou Edge em ambiente seguro https/localhost).");
+            return;
+        }
+        if(window.location.protocol === "file:"){
+            console.warn("Abrir o HTML por file:// limita a memória da pasta. Prefira abrir pela mesma origem (ex.: Live Server ou python -m http.server).");
+        }
+        try{
+            const salvo = await lerPastaDoIndice();
+            if(salvo){
+                pastaHandlePendente = salvo;
+                if(await permissaoJaConcedida(salvo)){
+                    pastaHandle = salvo;
+                    pastaHandlePendente = null;
+                    await carregarDB();
+                    if(pastaHandle && pastaHandle.name){
+                        localStorage.setItem("pastaId", pastaHandle.name);
+                        localStorage.setItem("pastaNomeUltima", pastaHandle.name);
+                    }
+                    esconderBarraReconectar();
+                    return;
+                }
+                mostrarBarraReconectar(salvo.name);
+                return;
+            }
+        }catch(e){
+            console.warn("Não foi possível ler a pasta salva:", e);
+        }
+        await selecionarPasta();
+        if(!pastaHandle)
+            document.getElementById("syncLabel").innerText = "Escolha a pasta no menu (☰)";
+    }
+
+    async function selecionarPasta(){
+        esconderBarraReconectar();
+        try{
+            pastaHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+            const permitido = await garantirPermissaoAposSelecao(pastaHandle);
+            if(!permitido){
+                pastaHandle = null;
+                return alert("Permissão negada. A pasta não pôde ser usada.");
+            }
+            await salvarPastaNoIndice(pastaHandle);
+            await carregarDB();
+        }catch(err){
+            if(err && err.name !== "AbortError")
+                console.error(err);
+        }
+    }
+
+    async function carregarDB(silencioso = false){
+        if(!pastaHandle) return;
+        try{
+            const arquivo = await pastaHandle.getFileHandle("banco_erp.json",{create:true});
+            const file = await arquivo.getFile();
+            const texto = await file.text();
+
+            if (texto !== lastHash) {
+                lastHash = texto;
+                db = texto ? JSON.parse(texto) : { caixas: [], prateleiras: [], processos: [] };
+                if(!db.processos) db.processos = [];
+                garantirHistoricoCaixas();
+                atualizarInterface();
+                document.getElementById("syncLabel").innerText = "Sinc.: " + new Date().toLocaleTimeString();
+            }
+        }catch(err){ console.error(err); }
+    }
+
+    async function salvarDB(){
+        const arquivo = await pastaHandle.getFileHandle("banco_erp.json",{create:true});
+        const writable = await arquivo.createWritable();
+        const conteudo = JSON.stringify(db, null, 2);
+        await writable.write(conteudo);
+        await writable.close();
+        lastHash = conteudo;
+    }
+
+    // ---------------- GESTÃO DE PRATELEIRAS ----------------
+    async function adicionarPrateleira(){
+        const nome = document.getElementById("nomePrateleiraNova").value.trim();
+        if(!nome) return;
+        if(db.prateleiras.find(p => p.nome === nome)) return alert("Prateleira já existe!");
+        db.prateleiras.push({ nome: nome, capacidade: 78 });
+        await salvarDB();
+        document.getElementById("nomePrateleiraNova").value = "";
+        atualizarInterface();
+    }
+
+    async function excluirPrateleira(nome){
+        if(db.caixas.some(c => c.prateleira === nome)) return alert("Não é possível excluir uma prateleira com caixas!");
+        if(confirm(`Excluir prateleira ${nome}?`)){
+            db.prateleiras = db.prateleiras.filter(p => p.nome !== nome);
+            await salvarDB();
+            atualizarInterface();
+        }
+    }
+
+    // ---------------- GESTÃO DE PROCESSOS ----------------
+    async function adicionarProcesso(){
+        const nome = document.getElementById("nomeProcessoNovo").value.trim();
+        if(!nome) return;
+        if(db.processos.includes(nome)) return alert("Processo já existe!");
+        db.processos.push(nome);
+        await salvarDB();
+        document.getElementById("nomeProcessoNovo").value = "";
+        atualizarInterface();
+    }
+
+    async function excluirProcesso(nome){
+        if(db.caixas.some(c => c.processos && c.processos.includes(nome)))
+            return alert("Não é possível excluir: existem caixas vinculadas a este processo!");
+        if(confirm(`Excluir processo ${nome}?`)){
+            db.processos = db.processos.filter(p => p !== nome);
+            await salvarDB();
+            atualizarInterface();
+        }
+    }
+
+    // ---------------- INTERFACE ----------------
+    function atualizarInterface(){
+        renderSelectPrateleiras();
+        renderCheckboxesProcessos();
+        renderConfigProcessos();
+        renderConfigPrateleiras();
+        listar();
+        if(document.getElementById("dashboardTela").style.display !== "none") atualizarDashboard();
+        if(document.getElementById("lancamentoTela").style.display !== "none") renderMapaLancamento();
+    }
+
+    function renderSelectPrateleiras(){
+        const sel = document.getElementById("prateleiraSelect");
+        const valorAtual = sel.value;
+        sel.innerHTML = '<option value="">Selecione a Prateleira...</option>';
+        db.prateleiras.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.nome; opt.text = p.nome;
+            sel.appendChild(opt);
+        });
+        sel.value = valorAtual;
+    }
+
+    function renderCheckboxesProcessos(){
+        const container = document.getElementById("processosContainer");
+        container.innerHTML = db.processos.length === 0 ? "<small>Nenhum processo cadastrado</small>" : "";
+        db.processos.forEach(proc => {
+            container.innerHTML += `<label style="font-size:13px; cursor:pointer;"><input type="checkbox" name="procCheck" value="${proc}"> ${proc}</label>`;
+        });
+    }
+
+    function renderConfigProcessos(){
+        const tbody = document.getElementById("listaProcessosConfig");
+        tbody.innerHTML = "";
+        db.processos.forEach(p => {
+            tbody.innerHTML += `<tr><td>${p}</td><td><button style="background:#e74c3c" onclick="excluirProcesso('${p}')">Excluir</button></td></tr>`;
+        });
+    }
+
+    function renderConfigPrateleiras(){
+        const tbody = document.getElementById("listaPrateleirasConfig");
+        tbody.innerHTML = "";
+        db.prateleiras.forEach(p => {
+            const qtd = db.caixas.filter(c => c.prateleira === p.nome).length;
+            tbody.innerHTML += `<tr><td><b>${p.nome}</b></td><td>${qtd} / 78</td><td><button style="background:#e74c3c" onclick="excluirPrateleira('${p.nome}')">Excluir</button></td></tr>`;
+        });
+    }
+
+    // ---------------- HISTÓRICO DE CAIXAS ----------------
+    function garantirHistoricoCaixas(){
+        if(!db || !Array.isArray(db.caixas)) return;
+        db.caixas.forEach(c => { if(!Array.isArray(c.historico)) c.historico = []; });
+    }
+
+    function formatarLocalCaixa(c){
+        if(!c || !c.prateleira) return "—";
+        return c.prateleira + " (N" + c.nivel + "-S" + c.espaco + ")";
+    }
+
+    function processosChave(arr){
+        return JSON.stringify([...(arr || [])].slice().sort());
+    }
+
+    function snapshotCaixaParaHistorico(c){
+        return {
+            caixa: c.caixa,
+            inicio: c.inicio || "",
+            fim: c.fim || "",
+            validade: c.validade || "",
+            prateleira: c.prateleira || "",
+            nivel: c.nivel,
+            espaco: c.espaco,
+            status: c.status || "",
+            usuario: c.usuario || "",
+            processos: c.processos ? [...c.processos] : []
+        };
+    }
+
+    function extrairMudancasRegistro(antes, depois){
+        const m = [];
+        const rotulos = { caixa: "Número da caixa", inicio: "Data início", fim: "Data fim", validade: "Validade", status: "Status", usuario: "Responsável" };
+        for(const k of ["caixa", "inicio", "fim", "validade", "status", "usuario"]){
+            const va = antes[k] != null ? String(antes[k]) : "";
+            const vb = depois[k] != null ? String(depois[k]) : "";
+            if(va !== vb) m.push({ campo: k, label: rotulos[k], de: va || "—", para: vb || "—" });
+        }
+        if(formatarLocalCaixa(antes) !== formatarLocalCaixa(depois))
+            m.push({ campo: "localizacao", label: "Localização", de: formatarLocalCaixa(antes), para: formatarLocalCaixa(depois) });
+        if(processosChave(antes.processos) !== processosChave(depois.processos)){
+            const fa = (antes.processos && antes.processos.length) ? antes.processos.join(", ") : "—";
+            const fb = (depois.processos && depois.processos.length) ? depois.processos.join(", ") : "—";
+            m.push({ campo: "processos", label: "Processos", de: fa, para: fb });
+        }
+        return m;
+    }
+
+    function criarEntradaHistorico(tipo, mudancas, registradoPor){
+        return {
+            quandoISO: new Date().toISOString(),
+            tipo: tipo,
+            registradoPor: registradoPor != null ? String(registradoPor) : "",
+            mudancas: mudancas
+        };
+    }
+
+    function mudancasIniciaisCadastro(depois){
+        return extrairMudancasRegistro({
+            caixa: "", inicio: "", fim: "", validade: "", prateleira: "", nivel: 0, espaco: 0,
+            status: "", usuario: "", processos: []
+        }, depois);
+    }
+
+    function escModal(s){
+        if(s == null || s === "") return "";
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function renderHtmlHistorico(caixa){
+        const lista = Array.isArray(caixa.historico) ? [...caixa.historico].reverse() : [];
+        if(lista.length === 0)
+            return "<div class=\"historico-vazio\">Nenhum evento registrado (caixa antiga ou sem alterações desde a atualização).</div>";
+        return lista.map(h => {
+            const dataStr = h.quandoISO ? new Date(h.quandoISO).toLocaleString("pt-BR") : "—";
+            const tipoTxt = h.tipo === "criacao" ? "Cadastro" : "Edição";
+            const por = h.registradoPor ? " · Responsável no formulário: " + escModal(h.registradoPor) : "";
+            const mhtml = (h.mudancas || []).map(mu =>
+                "<div class=\"historico-mud\"><strong>" + escModal(mu.label) + ":</strong> " +
+                escModal(mu.de) + " → " + escModal(mu.para) + "</div>"
+            ).join("");
+            return "<div class=\"historico-item\"><div class=\"hi-top\">" + escModal(dataStr) + por +
+                "</div><div class=\"hi-tipo\">" + tipoTxt + "</div>" + mhtml + "</div>";
+        }).join("");
+    }
+
+    // ---------------- CRUD CAIXAS ----------------
+    function atualizarResumoPosicao(){
+        const el = document.getElementById("posicaoLancamentoResumo");
+        if(!el) return;
+        const n = parseInt(document.getElementById("nivel").value, 10);
+        const e = parseInt(document.getElementById("espaco").value, 10);
+        if(!isNaN(n) && !isNaN(e) && n >= 1 && n <= 13 && e >= 1 && e <= 6){
+            el.textContent = "Posição selecionada: nível " + n + ", espaço " + e;
+            el.classList.remove("vazio");
+        } else {
+            el.innerHTML = "Nenhuma posição selecionada — clique em um espaço <strong>verde</strong> no mapa.";
+            el.classList.add("vazio");
+        }
+    }
+
+    function esconderMsgLancamentoOk(){
+        const ok = document.getElementById("msgLancamentoOk");
+        if(ok) ok.style.display = "none";
+    }
+
+    function onPrateleiraLancamentoChange(){
+        esconderMsgLancamentoOk();
+        document.getElementById("nivel").value = "";
+        document.getElementById("espaco").value = "";
+        atualizarResumoPosicao();
+        const ph = document.getElementById("mapaLancamentoPlaceholder");
+        const nome = document.getElementById("prateleiraSelect").value;
+        if(ph) ph.style.display = nome ? "none" : "block";
+        renderMapaLancamento();
+    }
+
+    function renderMapaLancamento(){
+        const container = document.getElementById("mapaLancamento");
+        if(!container) return;
+        const nome = document.getElementById("prateleiraSelect").value;
+        const ph = document.getElementById("mapaLancamentoPlaceholder");
+        if(!nome){
+            container.innerHTML = "";
+            container.style.display = "none";
+            if(ph) ph.style.display = "block";
+            return;
+        }
+        if(ph) ph.style.display = "none";
+        container.style.display = "block";
+        container.innerHTML = "";
+
+        const selN = parseInt(document.getElementById("nivel").value, 10);
+        const selE = parseInt(document.getElementById("espaco").value, 10);
+
+        const box = document.createElement("div");
+        box.className = "prateleiraBox";
+        const h = document.createElement("h3");
+        h.textContent = nome;
+        box.appendChild(h);
+        const leg = document.createElement("p");
+        leg.className = "mapaLegendaLanc";
+        leg.innerHTML = "<small>Verde = livre · Demais cores = ocupado (conforme status) · Moldura escura = posição escolhida para este formulário</small>";
+        box.appendChild(leg);
+
+        for(let n = 13; n >= 1; n--){
+            const linha = document.createElement("div");
+            linha.className = "nivel";
+            const lab = document.createElement("div");
+            lab.className = "nivelLabel";
+            lab.textContent = "N" + n;
+            linha.appendChild(lab);
+            for(let e = 1; e <= 6; e++){
+                const idx = db.caixas.findIndex((c, i) => c.prateleira === nome && c.nivel === n && c.espaco === e);
+                const slot = document.createElement("div");
+                slot.className = "slot";
+                const ocupadoPorOutro = idx !== -1 && idx !== edit;
+                const meuSlot = idx !== -1 && idx === edit;
+
+                if(ocupadoPorOutro){
+                    slot.classList.add("ocupado" + db.caixas[idx].status, "slotOcupadoOutro");
+                    slot.textContent = db.caixas[idx].caixa;
+                    slot.title = "Ocupado — caixa " + db.caixas[idx].caixa;
+                    const cx = db.caixas[idx].caixa;
+                    slot.onclick = () => alert("Este espaço já está ocupado pela caixa " + cx + ". Escolha outro.");
+                } else if(meuSlot){
+                    slot.classList.add("ocupado" + db.caixas[idx].status, "slotEdicaoAtual");
+                    if(selN === n && selE === e) slot.classList.add("slotSelecionado");
+                    slot.textContent = db.caixas[idx].caixa;
+                    slot.title = "Posição atual desta caixa";
+                    slot.onclick = () => {
+                        document.getElementById("nivel").value = n;
+                        document.getElementById("espaco").value = e;
+                        atualizarResumoPosicao();
+                        renderMapaLancamento();
+                    };
+                } else {
+                    slot.classList.add("livre");
+                    if(selN === n && selE === e) slot.classList.add("slotSelecionado");
+                    slot.textContent = String(e);
+                    slot.title = "Livre — clique para selecionar";
+                    slot.onclick = () => {
+                        document.getElementById("nivel").value = n;
+                        document.getElementById("espaco").value = e;
+                        atualizarResumoPosicao();
+                        renderMapaLancamento();
+                    };
+                }
+                linha.appendChild(slot);
+            }
+            box.appendChild(linha);
+        }
+        container.appendChild(box);
+    }
+
+    function limparAposSalvarSucesso(){
+        const prat = document.getElementById("prateleiraSelect").value;
+        edit = null;
+        document.getElementById("btnSalvar").innerText = "Salvar";
+        document.getElementById("btnCancelar").style.display = "none";
+        document.getElementById("caixa").value = "";
+        document.getElementById("inicio").value = "";
+        document.getElementById("fim").value = "";
+        document.getElementById("validade").value = "";
+        document.getElementById("usuarioStatus").value = "";
+        document.getElementById("status").selectedIndex = 0;
+        document.querySelectorAll('input[name="procCheck"]').forEach(cb => { cb.checked = false; });
+        document.getElementById("nivel").value = "";
+        document.getElementById("espaco").value = "";
+        document.getElementById("prateleiraSelect").value = prat;
+        atualizarResumoPosicao();
+        const ph = document.getElementById("mapaLancamentoPlaceholder");
+        if(ph) ph.style.display = prat ? "none" : "block";
+        renderMapaLancamento();
+        const ok = document.getElementById("msgLancamentoOk");
+        if(ok){
+            ok.style.display = "inline";
+            clearTimeout(window._msgLancOkT);
+            window._msgLancOkT = setTimeout(() => { ok.style.display = "none"; }, 4500);
+        }
+    }
+
+    async function salvar(e){
+        e.preventDefault();
+        await carregarDB(true);
+
+        const prat = document.getElementById("prateleiraSelect").value;
+        const nl = parseInt(document.getElementById("nivel").value, 10);
+        const es = parseInt(document.getElementById("espaco").value, 10);
+        if(!prat) return alert("Selecione a prateleira.");
+        if(isNaN(nl) || isNaN(es) || nl < 1 || nl > 13 || es < 1 || es > 6)
+            return alert("Escolha uma posição no mapa (espaço verde livre).");
+
+        const procs = Array.from(document.querySelectorAll('input[name="procCheck"]:checked')).map(cb => cb.value);
+
+        let historicoCarry = [];
+        if(edit !== null && db.caixas[edit]){
+            const h0 = db.caixas[edit].historico;
+            historicoCarry = Array.isArray(h0) ? JSON.parse(JSON.stringify(h0)) : [];
+        }
+
+        const item = {
+            caixa: document.getElementById("caixa").value,
+            inicio: document.getElementById("inicio").value,
+            fim: document.getElementById("fim").value,
+            validade: document.getElementById("validade").value,
+            prateleira: prat,
+            nivel: nl,
+            espaco: es,
+            status: document.getElementById("status").value,
+            usuario: document.getElementById("usuarioStatus").value,
+            processos: procs,
+            dataUpdate: new Date().toLocaleString(),
+            historico: historicoCarry
+        };
+
+        const ocupado = db.caixas.find((c, idx) =>
+            c.prateleira === item.prateleira && c.nivel === item.nivel && c.espaco === item.espaco && idx !== edit
+        );
+        if(ocupado) return alert("Esta posição já está ocupada pela caixa " + ocupado.caixa + ". Escolha outro espaço no mapa.");
+
+        if(edit !== null){
+            const antes = snapshotCaixaParaHistorico(db.caixas[edit]);
+            const mud = extrairMudancasRegistro(antes, item);
+            if(mud.length > 0)
+                item.historico.push(criarEntradaHistorico("edicao", mud, item.usuario));
+        } else {
+            item.historico = [criarEntradaHistorico("criacao", mudancasIniciaisCadastro(item), item.usuario)];
+        }
+
+        if(edit !== null) db.caixas[edit] = item;
+        else db.caixas.push(item);
+
+        await salvarDB();
+        limparAposSalvarSucesso();
+        atualizarInterface();
+    }
+
+    function listar(){
+        const lista = document.getElementById("lista");
+        const busca = document.getElementById("buscarCaixa").value.toLowerCase();
+
+        const filtrados = db.caixas.filter(c =>
+            c.caixa.toLowerCase().includes(busca) ||
+            (c.processos && c.processos.some(p => p.toLowerCase().includes(busca)))
+        );
+
+        lista.innerHTML = "";
+        filtrados.forEach((c, i) => {
+            const idxReal = db.caixas.indexOf(c);
+            const tagsProc = c.processos ? c.processos.map(p => `<span class="processo-tag">${p}</span>`).join('') : "";
+
+            lista.innerHTML += `<tr onclick="detalhes(${idxReal})">
+                <td><b>${c.caixa}</b></td>
+                <td>${tagsProc}</td>
+                <td><span class="badge" style="background:${getColor(c.status)}">${c.status}</span></td>
+                <td>${c.prateleira} (N${c.nivel}-S${c.espaco})</td>
+                <td>
+                    <button onclick="event.stopPropagation(); editar(${idxReal})">✏️</button>
+                    <button style="background:#e74c3c" onclick="event.stopPropagation(); remover(${idxReal})">🗑️</button>
+                </td>
+            </tr>`;
+        });
+        mapa();
+    }
+
+    function getColor(s){
+        const colors = {Guardada:'#27ae60', Preparada:'#f1c40f', Digitalizada:'#3498db', Eliminada:'#e74c3c'};
+        return colors[s] || '#7f8c8d';
+    }
+
+    function editar(i){
+        mostrarTela("lancamentoTela", false);
+        esconderMsgLancamentoOk();
+        const c = db.caixas[i];
+        document.getElementById("caixa").value = c.caixa;
+        document.getElementById("inicio").value = c.inicio;
+        document.getElementById("fim").value = c.fim;
+        document.getElementById("validade").value = c.validade;
+        document.getElementById("prateleiraSelect").value = c.prateleira;
+        document.getElementById("nivel").value = c.nivel;
+        document.getElementById("espaco").value = c.espaco;
+        document.getElementById("status").value = c.status;
+        document.getElementById("usuarioStatus").value = c.usuario;
+
+        // Marcar checkboxes dos processos
+        document.querySelectorAll('input[name="procCheck"]').forEach(cb => {
+            cb.checked = c.processos && c.processos.includes(cb.value);
+        });
+
+        edit = i;
+        document.getElementById("btnSalvar").innerText = "Atualizar";
+        document.getElementById("btnCancelar").style.display = "inline-block";
+        atualizarResumoPosicao();
+        const ph = document.getElementById("mapaLancamentoPlaceholder");
+        if(ph) ph.style.display = document.getElementById("prateleiraSelect").value ? "none" : "block";
+        renderMapaLancamento();
+        window.scrollTo(0, 0);
+    }
+
+    function cancelarEdicao(){
+        esconderMsgLancamentoOk();
+        edit = null;
+        document.getElementById("cadastroForm").reset();
+        document.querySelectorAll('input[name="procCheck"]').forEach(cb => cb.checked = false);
+        document.getElementById("btnSalvar").innerText = "Salvar";
+        document.getElementById("btnCancelar").style.display = "none";
+        atualizarResumoPosicao();
+        const ph = document.getElementById("mapaLancamentoPlaceholder");
+        if(ph) ph.style.display = "block";
+        renderMapaLancamento();
+    }
+
+    async function remover(i){
+        if(confirm("Excluir esta caixa?")){
+            db.caixas.splice(i, 1);
+            await salvarDB();
+            atualizarInterface();
+        }
+    }
+
+    // ---------------- MAPA E AUXS ----------------
+    function mapa(){
+        const container = document.getElementById("mapa");
+        container.innerHTML = "";
+        db.prateleiras.forEach(p => {
+            const box = document.createElement("div");
+            box.className = "prateleiraBox";
+            box.innerHTML = `<h3>${p.nome}</h3>`;
+            for(let n=13; n>=1; n--){
+                const linha = document.createElement("div"); linha.className = "nivel";
+                linha.innerHTML = `<div class="nivelLabel">N${n}</div>`;
+                for(let e=1; e<=6; e++){
+                    const idx = db.caixas.findIndex(c => c.prateleira === p.nome && c.nivel === n && c.espaco === e);
+                    const slot = document.createElement("div");
+                    if(idx !== -1){
+                        slot.className = "slot ocupado" + db.caixas[idx].status;
+                        slot.innerText = db.caixas[idx].caixa;
+                        slot.onclick = () => detalhes(idx);
+                    } else {
+                        slot.className = "slot livre"; slot.innerText = e;
+                    }
+                    linha.appendChild(slot);
+                }
+                box.appendChild(linha);
+            }
+            container.appendChild(box);
+        });
+    }
+
+    function fecharMenuDropdown(){
+        document.getElementById("menu").classList.remove("show");
+        document.getElementById("hamburger").classList.remove("active");
+    }
+
+    function mostrarTela(t, fecharMenu = true){
+        ["dashboardTela", "lancamentoTela", "listaTela", "mapaTela", "configTela", "processoTela"].forEach(id => {
+            document.getElementById(id).style.display = "none";
+        });
+        document.getElementById(t).style.display = "block";
+        if(t==='dashboardTela') atualizarDashboard();
+        if(t === "lancamentoTela"){
+            const ph = document.getElementById("mapaLancamentoPlaceholder");
+            if(ph) ph.style.display = document.getElementById("prateleiraSelect").value ? "none" : "block";
+            renderMapaLancamento();
+        }
+        if(fecharMenu) fecharMenuDropdown();
+    }
+
+    function toggleMenu(){
+        document.getElementById("menu").classList.toggle("show");
+        document.getElementById("hamburger").classList.toggle("active");
+    }
+
+    function detalhes(i){
+        const c = db.caixas[i];
+        const procs = c.processos ? c.processos.join(", ") : "Nenhum";
+        const mb = document.querySelector("#modal .modalBox");
+        if(mb) mb.classList.add("modal-wide");
+        document.getElementById("modalConteudo").innerHTML = `
+            <h3>Caixa: ${escModal(c.caixa)}</h3>
+            <p><b>Processos:</b> ${escModal(procs)}</p>
+            <p><b>Local:</b> ${escModal(formatarLocalCaixa(c))}</p>
+            <p><b>Status:</b> ${escModal(c.status)}</p>
+            <p><b>Validade:</b> ${escModal(c.validade)}</p>
+            <p><b>Responsável:</b> ${escModal(c.usuario)}</p>
+            <p><small>Última atualização: ${escModal(c.dataUpdate || "N/A")}</small></p>
+            <h4 style="margin:16px 0 6px 0;font-size:14px;color:#2c3e50;">Histórico</h4>
+            <div class="historico-caixa">${renderHtmlHistorico(c)}</div>
+            <hr>
+            <button onclick="fecharModal()">Fechar</button>
+        `;
+        document.getElementById("modal").style.display = "flex";
+    }
+    function fecharModal(){
+        document.getElementById("modal").style.display = "none";
+        const mb = document.querySelector("#modal .modalBox");
+        if(mb) mb.classList.remove("modal-wide");
+    }
+    function buscarCaixa(){ listar(); }
+
+    function hojeISO(){
+        const d = new Date();
+        const z = n => String(n).padStart(2,"0");
+        return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    }
+
+    function addDiasISO(dias){
+        const d = new Date();
+        d.setDate(d.getDate() + dias);
+        const z = n => String(n).padStart(2,"0");
+        return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+    }
+
+    function preencherSelectsDashboard(){
+        const selPrat = document.getElementById("dashPrateleira");
+        if(!selPrat) return;
+        const valPrat = selPrat.value;
+        selPrat.innerHTML = '<option value="">Todas as prateleiras</option>';
+        db.prateleiras.forEach(p => {
+            const o = document.createElement("option");
+            o.value = p.nome;
+            o.textContent = p.nome;
+            selPrat.appendChild(o);
+        });
+        if([...selPrat.options].some(o => o.value === valPrat)) selPrat.value = valPrat;
+
+        const selProc = document.getElementById("dashProcesso");
+        const prev = dashProcessoInicializado ? [...selProc.selectedOptions].map(o => o.value) : null;
+        selProc.innerHTML = "";
+        db.processos.forEach(n => {
+            const o = document.createElement("option");
+            o.value = n;
+            o.textContent = n;
+            selProc.appendChild(o);
+        });
+        if(!dashProcessoInicializado){
+            [...selProc.options].forEach(o => { o.selected = true; });
+            dashProcessoInicializado = true;
+        } else {
+            [...selProc.options].forEach(o => { o.selected = prev.includes(o.value); });
+            if([...selProc.options].every(o => !o.selected))
+                [...selProc.options].forEach(o => { o.selected = true; });
+        }
+    }
+
+    function caixasFiltradasDashboard(){
+        const q = (document.getElementById("dashBusca").value || "").trim().toLowerCase();
+        const rapido = document.getElementById("dashFiltroRapido").value;
+        const vd = document.getElementById("dashValidadeDe").value;
+        const va = document.getElementById("dashValidadeAte").value;
+        const id = document.getElementById("dashInicioDe").value;
+        const ia = document.getElementById("dashInicioAte").value;
+        const prat = document.getElementById("dashPrateleira").value;
+        const procOpts = document.getElementById("dashProcesso");
+        const procSel = [...procOpts.selectedOptions].map(o => o.value);
+        const todosProcs = db.processos.length === 0 || procSel.length === 0 || procSel.length === db.processos.length;
+        const statusChecks = [...document.querySelectorAll('input[name="dashSt"]:checked')].map(i => i.value);
+        const todosStatus = statusChecks.length === 4;
+        const hoje = hojeISO();
+        const lim30 = addDiasISO(30);
+        const lim90 = addDiasISO(90);
+
+        return db.caixas.filter(c => {
+            if(q){
+                const u = (c.usuario || "").toLowerCase();
+                const cx = (c.caixa || "").toLowerCase();
+                if(!cx.includes(q) && !u.includes(q)) return false;
+            }
+            if(rapido === "vencidas"){
+                if(!c.validade || c.validade >= hoje) return false;
+            } else if(rapido === "vence30"){
+                if(!c.validade || c.validade < hoje || c.validade > lim30) return false;
+            } else if(rapido === "vence90"){
+                if(!c.validade || c.validade < hoje || c.validade > lim90) return false;
+            }
+            if(vd && (!c.validade || c.validade < vd)) return false;
+            if(va && (!c.validade || c.validade > va)) return false;
+            if(id && (!c.inicio || c.inicio < id)) return false;
+            if(ia && (!c.inicio || c.inicio > ia)) return false;
+            if(prat && c.prateleira !== prat) return false;
+            if(!todosStatus && !statusChecks.includes(c.status)) return false;
+            if(!todosProcs){
+                const bp = c.processos || [];
+                if(!procSel.some(p => bp.includes(p))) return false;
+            }
+            return true;
+        });
+    }
+
+    function aplicarFiltrosDashboard(){ renderDashboardDados(); }
+
+    function limparFiltrosDashboard(){
+        document.getElementById("dashBusca").value = "";
+        document.getElementById("dashFiltroRapido").value = "";
+        document.getElementById("dashValidadeDe").value = "";
+        document.getElementById("dashValidadeAte").value = "";
+        document.getElementById("dashInicioDe").value = "";
+        document.getElementById("dashInicioAte").value = "";
+        document.getElementById("dashPrateleira").value = "";
+        document.querySelectorAll('input[name="dashSt"]').forEach(i => { i.checked = true; });
+        const sp = document.getElementById("dashProcesso");
+        [...sp.options].forEach(o => { o.selected = true; });
+        renderDashboardDados();
+    }
+
+    function agregarParaGrafico(dim, caixas){
+        const map = new Map();
+        const coresStatus = { Guardada:"#27ae60", Preparada:"#f1c40f", Digitalizada:"#3498db", Eliminada:"#e74c3c" };
+
+        if(dim === "status"){
+            ["Guardada","Preparada","Digitalizada","Eliminada"].forEach(s => map.set(s, 0));
+            caixas.forEach(c => {
+                const k = c.status || "—";
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+        } else if(dim === "prateleira"){
+            db.prateleiras.forEach(p => map.set(p.nome, 0));
+            caixas.forEach(c => {
+                const k = c.prateleira || "—";
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+        } else if(dim === "nivel"){
+            for(let n = 1; n <= 13; n++) map.set("Nível " + n, 0);
+            caixas.forEach(c => {
+                const n = c.nivel;
+                if(n >= 1 && n <= 13) map.set("Nível " + n, (map.get("Nível " + n) || 0) + 1);
+            });
+        } else if(dim === "usuario"){
+            caixas.forEach(c => {
+                const k = (c.usuario && String(c.usuario).trim()) ? String(c.usuario).trim() : "(não informado)";
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+        } else if(dim === "mes_validade"){
+            caixas.forEach(c => {
+                if(!c.validade || c.validade.length < 7) return;
+                const k = c.validade.slice(0, 7);
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+        } else if(dim === "mes_inicio"){
+            caixas.forEach(c => {
+                if(!c.inicio || c.inicio.length < 7) return;
+                const k = c.inicio.slice(0, 7);
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+        } else if(dim === "processo"){
+            caixas.forEach(c => {
+                const ps = (c.processos && c.processos.length) ? c.processos : ["(sem processo)"];
+                ps.forEach(p => map.set(p, (map.get(p) || 0) + 1));
+            });
+        }
+
+        let entries = [...map.entries()].filter(([, v]) => v > 0);
+        if(dim === "processo" && entries.length > 12){
+            entries.sort((a, b) => b[1] - a[1]);
+            const top = entries.slice(0, 11);
+            const rest = entries.slice(11).reduce((s, x) => s + x[1], 0);
+            entries = [...top, ["Outros", rest]];
+        }
+        if((dim === "mes_validade" || dim === "mes_inicio") && entries.length){
+            entries.sort((a, b) => a[0].localeCompare(b[0]));
+        }
+        const labels = entries.map(x => x[0]);
+        const values = entries.map(x => x[1]);
+        return { labels, values, coresStatus, dim };
+    }
+
+    function paletaCores(n, dim, labels, coresStatus){
+        const base = ["#3498db","#9b59b6","#1abc9c","#e67e22","#34495e","#16a085","#d35400","#8e44ad","#27ae60","#c0392b","#2980b9","#f39c12","#7f8c8d","#2ecc71","#e74c3c"];
+        return labels.map((lb, i) => {
+            if(dim === "status" && coresStatus[lb]) return coresStatus[lb];
+            return base[i % base.length];
+        });
+    }
+
+    function destruirDashboardCharts(){
+        [_dashChart1, _dashChart2].forEach(ch => {
+            if(ch){ ch.destroy(); }
+        });
+        _dashChart1 = _dashChart2 = null;
+    }
+
+    function montarChart(canvasId, dimSelectId, tipoSelectId, caixas){
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const wrap = canvas.closest(".chart-wrap");
+        const dim = document.getElementById(dimSelectId).value;
+        const tipo = document.getElementById(tipoSelectId).value;
+        const { labels, values, coresStatus } = agregarParaGrafico(dim, caixas);
+        const semDados = !values.length || values.every(v => v === 0);
+
+        let alvoMsg = wrap.querySelector(".dash-chart-msg");
+        if(!alvoMsg){
+            alvoMsg = document.createElement("div");
+            alvoMsg.className = "dash-empty dash-chart-msg";
+            wrap.appendChild(alvoMsg);
+        }
+        if(semDados){
+            canvas.style.display = "none";
+            alvoMsg.style.display = "block";
+            alvoMsg.textContent = "Nenhum dado para os filtros atuais nesta dimensão.";
+            return;
+        }
+        canvas.style.display = "block";
+        alvoMsg.style.display = "none";
+
+        const cores = paletaCores(labels.length, dim, labels, coresStatus);
+        const ctx = canvas.getContext("2d");
+        const isCartesian = tipo === "bar" || tipo === "line";
+        const cfg = {
+            type: tipo,
+            data: {
+                labels,
+                datasets: [{
+                    label: "Quantidade",
+                    data: values,
+                    backgroundColor: isCartesian ? cores.map(c => tipo === "line" ? "rgba(52,152,219,0.25)" : c) : cores,
+                    borderColor: tipo === "line" ? "#2980b9" : isCartesian ? cores : "#fff",
+                    borderWidth: isCartesian ? 1 : 2,
+                    fill: tipo === "line"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: tipo === "pie" || tipo === "doughnut" || tipo === "polarArea" }
+                },
+                scales: isCartesian ? {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { ticks: { maxRotation: 45, minRotation: 0 } }
+                } : {}
+            }
+        };
+        if(tipo === "line"){
+            cfg.data.datasets[0].backgroundColor = "rgba(52,152,219,0.2)";
+            cfg.data.datasets[0].borderColor = "#2980b9";
+            cfg.data.datasets[0].borderWidth = 2;
+            cfg.data.datasets[0].tension = 0.25;
+        }
+
+        const inst = new Chart(ctx, cfg);
+        if(canvasId === "chartDashboard1") _dashChart1 = inst;
+        else _dashChart2 = inst;
+    }
+
+    function renderKpis(filtradas){
+        const el = document.getElementById("dashboardKpis");
+        const hoje = hojeISO();
+        const lim30 = addDiasISO(30);
+        const vencidas = filtradas.filter(c => c.validade && c.validade < hoje).length;
+        const vence30 = filtradas.filter(c => c.validade && c.validade >= hoje && c.validade <= lim30).length;
+
+        const pratsUsadas = new Set(filtradas.map(c => c.prateleira));
+        let cap = 0;
+        db.prateleiras.forEach(p => {
+            if(pratsUsadas.has(p.nome)) cap += (p.capacidade || 78);
+        });
+        if(cap === 0 && filtradas.length){
+            cap = pratsUsadas.size * 78;
+        }
+        const pctOcup = cap ? Math.min(100, Math.round((filtradas.length / cap) * 100)) : 0;
+
+        const porSt = {};
+        filtradas.forEach(c => { porSt[c.status] = (porSt[c.status] || 0) + 1; });
+        const badges = ["Guardada","Preparada","Digitalizada","Eliminada"].map(s => {
+            const n = porSt[s] || 0;
+            const bg = getColor(s);
+            return `<span class="badge" style="background:${bg}">${s}: ${n}</span>`;
+        }).join(" ");
+
+        el.innerHTML = `
+            <div class="kpi-card">
+                <div class="kpi-lbl">Caixas no filtro</div>
+                <div class="kpi-val">${filtradas.length}</div>
+                <div class="kpi-sub">Total no banco: ${db.caixas.length}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-lbl">Ocupação estimada</div>
+                <div class="kpi-val">${cap ? pctOcup + "%" : "—"}</div>
+                <div class="kpi-sub">${filtradas.length} caixas em ${pratsUsadas.size} prateleira(s) · capacidade ref.: ${cap || "—"} pos.</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-lbl">Validade</div>
+                <div class="kpi-val" style="color:#e74c3c">${vencidas}</div>
+                <div class="kpi-sub">Vencidas · <span style="color:#f39c12">${vence30}</span> a vencer em 30 dias</div>
+            </div>
+            <div class="kpi-card" style="flex:2;min-width:220px;">
+                <div class="kpi-lbl">Distribuição por status</div>
+                <div class="kpi-inline">${badges}</div>
+            </div>
+        `;
+    }
+
+    function renderDashboardDados(){
+        preencherSelectsDashboard();
+        const filtradas = caixasFiltradasDashboard();
+        renderKpis(filtradas);
+        destruirDashboardCharts();
+        montarChart("chartDashboard1", "dashDim1", "dashTipo1", filtradas);
+        montarChart("chartDashboard2", "dashDim2", "dashTipo2", filtradas);
+    }
+
+    function atualizarDashboard(){
+        renderDashboardDados();
+    }
+
+    (function initDashboardUI(){
+        const reagir = ["dashDim1","dashTipo1","dashDim2","dashTipo2"];
+        reagir.forEach(id => {
+            const n = document.getElementById(id);
+            if(n) n.addEventListener("change", () => {
+                if(document.getElementById("dashboardTela").style.display !== "none")
+                    renderDashboardDados();
+            });
+        });
+    })();
+</script>
+</body>
+</html>
